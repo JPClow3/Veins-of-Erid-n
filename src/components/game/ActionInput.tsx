@@ -1,6 +1,7 @@
 import React, { useState, memo } from 'react';
 import type { Choice } from '../../types/game';
 import type { PersonalityLean } from '../../types/character';
+import { PERSONALITY_LEANS } from '../../constants/gameConstants';
 
 interface ActionInputProps {
   choices: (string | Choice)[];
@@ -8,6 +9,7 @@ interface ActionInputProps {
   disabled: boolean;
   isCreatingCharacter: boolean;
   allowCustomAction?: boolean;
+  allowExamineAction?: boolean;
 }
 
 const IconEmpathy = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M10 3.5a1.5 1.5 0 013 0V4a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-.5a1.5 1.5 0 000 3h.5a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 00-1-1v-.5a1.5 1.5 0 01-3 0v.5a1 1 0 00-1 1H6a1 1 0 01-1-1v-3a1 1 0 011-1h.5a1.5 1.5 0 000-3H6a1 1 0 01-1-1V6a1 1 0 011-1h3a1 1 0 001-1v-.5z" /></svg>;
@@ -22,7 +24,7 @@ const IconMap = {
   Lore: <IconLore />,
 };
 
-const ActionInput: React.FC<ActionInputProps> = ({ choices, onSubmit, disabled, isCreatingCharacter, allowCustomAction }) => {
+const ActionInput: React.FC<ActionInputProps> = ({ choices, onSubmit, disabled, isCreatingCharacter, allowCustomAction, allowExamineAction }) => {
   const [customAction, setCustomAction] = useState('');
   const [name, setName] = useState('');
   const [submittedAction, setSubmittedAction] = useState<string | null>(null);
@@ -50,16 +52,23 @@ const ActionInput: React.FC<ActionInputProps> = ({ choices, onSubmit, disabled, 
     onSubmit(choice);
   };
   
-  // Reset submitted action when choices reappear
   React.useEffect(() => {
     if (!disabled) {
         setSubmittedAction(null);
     }
   }, [disabled]);
 
-
-  // Special state for name prompt during character creation
   const isNamePrompt = choices.length === 1 && typeof choices[0] === 'string' && choices[0] === 'PROMPT_FOR_NAME';
+
+  if (disabled && submittedAction) {
+    return (
+        <div className="h-full min-h-[92px] flex items-center justify-center animate-fade-in">
+            <p className="text-text-secondary font-ui italic text-center p-4">
+                You chose to: "{submittedAction}"
+            </p>
+        </div>
+    );
+  }
 
   if (isNamePrompt) {
     return (
@@ -71,13 +80,13 @@ const ActionInput: React.FC<ActionInputProps> = ({ choices, onSubmit, disabled, 
           placeholder="What is your name?"
           disabled={disabled}
           autoFocus
-          className="flex-grow bg-slate-900/50 border border-slate-700 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-violet-500 transition-all font-body placeholder:font-ui placeholder:text-slate-500"
+          className="flex-grow bg-surface-muted border border-border rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-accent-primary transition-all font-body placeholder:font-ui placeholder:text-text-secondary"
           aria-label="Enter your name"
         />
         <button
           type="submit"
           disabled={disabled || name.trim().length < 2}
-          className="p-3 bg-violet-600 hover:bg-violet-500 disabled:bg-violet-600/30 disabled:opacity-60 disabled:cursor-not-allowed rounded-lg transition-all duration-200 transform hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-violet-400 focus:ring-opacity-75 font-ui font-bold flex items-center gap-2"
+          className="p-3 bg-accent-primary hover:bg-accent-primary-hover disabled:bg-accent-primary/30 disabled:opacity-60 disabled:cursor-not-allowed rounded-lg transition-all duration-200 transform hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-accent-primary font-ui font-bold flex items-center gap-2 text-white"
           aria-label="Confirm name"
         >
           <span>Confirm</span>
@@ -99,23 +108,44 @@ const ActionInput: React.FC<ActionInputProps> = ({ choices, onSubmit, disabled, 
               key={index}
               onClick={() => handleChoiceClick(choiceText)}
               disabled={disabled}
-              className={`text-left p-3 text-slate-300 bg-slate-800/50 hover:bg-slate-800/80 border border-slate-700 hover:border-violet-500 disabled:opacity-60 disabled:cursor-not-allowed disabled:border-slate-700 rounded-lg transition-all duration-200 transform hover:-translate-y-px active:translate-y-0 focus:outline-none focus:ring-2 focus:ring-violet-400 focus:ring-opacity-75 font-ui flex items-center gap-3 group hover:shadow-violet-400/30 hover:shadow-[0_0_15px_var(--tw-shadow-color)] ${isSubmitting ? 'bg-violet-600/30 border-violet-500 scale-95 opacity-80 animate-flash-confirm' : ''}`}
+              className={`relative group text-left p-3 text-text-primary bg-surface-muted/50 hover:bg-surface-muted border-l-2 hover:border-l-4 border-border-accent hover:border-accent-secondary disabled:opacity-60 disabled:cursor-not-allowed rounded-r-lg transition-all duration-200 transform hover:scale-[1.02] active:scale-100 focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-opacity-75 font-ui flex items-center gap-3 hover:shadow-glow-secondary ${isSubmitting ? 'bg-accent-primary/30 border-accent-primary scale-95 opacity-80' : ''}`}
             >
               {choiceLean && choiceLean !== 'Neutral' && (
-                <span className="text-teal-300 opacity-70 shrink-0 group-hover:opacity-100 transition-opacity">{IconMap[choiceLean]}</span>
+                <>
+                  <div className="shrink-0">
+                    <span className="text-accent-secondary opacity-70 group-hover:opacity-100 transition-opacity">{IconMap[choiceLean]}</span>
+                  </div>
+                  <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-max max-w-xs bg-surface text-text-primary text-xs rounded-md py-1 px-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none shadow-lg ring-1 ring-border z-10 text-left">
+                    <p className="font-bold text-accent-secondary">{choiceLean}</p>
+                    <p className="font-normal whitespace-normal">{PERSONALITY_LEANS[choiceLean]}</p>
+                  </div>
+                </>
               )}
-              <span>{choiceText}</span>
+              <span className="group-hover:text-white transition-colors duration-200">{choiceText}</span>
             </button>
           );
         })}
       </div>
       
+      {allowExamineAction && !isCreatingCharacter && choices.length > 0 && (
+          <button
+              onClick={() => handleChoiceClick("Examine the surroundings.")}
+              disabled={disabled}
+              className="w-full text-center p-2 text-text-secondary hover:text-text-primary bg-surface-muted/30 hover:bg-surface-muted/60 border border-dashed hover:border-solid border-border hover:border-accent-primary/80 disabled:opacity-60 disabled:cursor-not-allowed rounded-lg transition-all duration-200 font-ui text-sm flex items-center justify-center gap-2 group"
+          >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 opacity-60 group-hover:opacity-100 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <span>Examine</span>
+          </button>
+      )}
+
       {(allowCustomAction ?? true) && !isCreatingCharacter && choices.length > 0 && (
         <>
           <div className="relative flex pt-2 items-center">
-            <div className="flex-grow border-t border-slate-700/50"></div>
-            <span className="flex-shrink mx-4 text-slate-500 text-xs font-ui">OR</span>
-            <div className="flex-grow border-t border-slate-700/50"></div>
+            <div className="flex-grow border-t border-border"></div>
+            <span className="flex-shrink mx-4 text-text-secondary text-xs font-ui">OR</span>
+            <div className="flex-grow border-t border-border"></div>
           </div>
 
           <form onSubmit={handleCustomActionSubmit} className="flex items-center gap-2">
@@ -125,13 +155,13 @@ const ActionInput: React.FC<ActionInputProps> = ({ choices, onSubmit, disabled, 
               onChange={(e) => setCustomAction(e.target.value)}
               placeholder="Forge your own path..."
               disabled={disabled}
-              className="flex-grow bg-slate-900/50 border border-slate-700 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-violet-500 transition-all font-body placeholder:font-ui placeholder:text-slate-500"
+              className="flex-grow bg-surface-muted/50 border border-border rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-accent-primary transition-all font-body placeholder:font-ui placeholder:text-text-secondary"
               aria-label="Custom action input"
             />
             <button
               type="submit"
               disabled={disabled || !customAction.trim()}
-              className="p-3 bg-violet-600 hover:bg-violet-500 disabled:bg-violet-600/30 disabled:opacity-60 disabled:cursor-not-allowed rounded-lg transition-all duration-200 transform hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-violet-400 focus:ring-opacity-75 font-ui font-bold flex items-center gap-2"
+              className="p-3 bg-accent-primary hover:bg-accent-primary-hover text-white disabled:bg-accent-primary/30 disabled:opacity-60 disabled:cursor-not-allowed rounded-lg transition-all duration-200 transform hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-accent-primary font-ui font-bold flex items-center gap-2"
               aria-label="Submit custom action"
             >
               <span>Act</span>
@@ -142,11 +172,6 @@ const ActionInput: React.FC<ActionInputProps> = ({ choices, onSubmit, disabled, 
           </form>
         </>
       )}
-      <style>{`
-        .animate-flash-confirm {
-          animation: flash-confirm 0.4s ease-out;
-        }
-      `}</style>
     </div>
   );
 };

@@ -1,5 +1,3 @@
-
-
 import type { PersonalityLean, Affinity } from './character';
 
 export interface GeminiCreationResponse {
@@ -21,10 +19,14 @@ export type Journal = Record<string, {
 export interface LocationUpdate {
   name: string;
   description: string;
+  x: number; // Percentage from left (0-100)
+  y: number; // Percentage from top (0-100)
 }
 
 export type World = Record<string, {
   description: string;
+  x: number;
+  y: number;
 }>;
 
 export interface Choice {
@@ -38,6 +40,9 @@ export interface NpcProfile {
   description: string; // From PC's perspective
   faction: string;
   status: 'new' | 'updated';
+  role: string; // e.g. "Spymaster"
+  disposition: string; // e.g. "Wary", "Intrigued"
+  motivation: string; // e.g. "Seeks to preserve Veyran stability"
 }
 export type DramatisPersonae = Record<string, Omit<NpcProfile, 'name' | 'status'>>;
 
@@ -67,6 +72,12 @@ export interface ItemUpdate {
     category: ItemCategory;
 }
 
+export interface CharacterStatsUpdate {
+  veinStrainChange?: number; // Relative change
+  echoLevelChange?: number; // Relative change
+  reason: string;
+}
+
 
 export interface GeminiSceneResponse {
   description: string;
@@ -76,6 +87,7 @@ export interface GeminiSceneResponse {
   endingDescription: string;
   journalUpdate?: JournalUpdate;
   allowCustomAction?: boolean;
+  allowExamineAction?: boolean;
   locationUpdate?: LocationUpdate;
   actTransition?: {
     newAct: number;
@@ -86,6 +98,9 @@ export interface GeminiSceneResponse {
   itemUpdate?: ItemUpdate;
   soundEffect?: string;
   ambientTrack?: string;
+  magicEffect?: { intensity: 'subtle' | 'powerful' };
+  characterStatsUpdate?: CharacterStatsUpdate;
+  loreUnlock?: { type: 'faction' | 'nation' | 'affinity', key: string };
 }
 
 export interface GameState extends Omit<GeminiSceneResponse, 'choices'> {

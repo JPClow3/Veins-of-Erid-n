@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect, useCallback } from 'react';
 import Header from './components/common/Header';
 import ImageDisplay from './components/game/ImageDisplay';
@@ -8,7 +6,6 @@ import ActionInput from './components/game/ActionInput';
 import GameOverModal from './components/game/GameOverModal';
 import LoadingIndicator from './components/common/LoadingIndicator';
 import CharacterSheet from './components/game/CharacterSheet';
-import Tabs from './components/common/Tabs';
 import JournalPanel from './components/game/JournalPanel';
 import WorldPanel from './components/game/WorldPanel';
 import IntroSequence from './components/character/IntroSequence';
@@ -19,17 +16,18 @@ import InventoryPanel from './components/game/InventoryPanel';
 import useGameStore from './store/gameStore';
 import SettingsPanel from './components/common/SettingsPanel';
 import ToastNotifications from './components/common/ToastNotifications';
+import CodexSidebar from './components/common/CodexSidebar';
+import { blobManager } from './utils/blobManager';
+import LorePanel from './components/game/LorePanel';
 
 
 const App: React.FC = () => {
-  const [activeTab, setActiveTab] = useState('Character');
-  
   const {
     gameStage,
     currentScene, 
     storyHistory, 
-    isLoading, 
-    isImageLoading, 
+    gameStatus,
+    isSpeechLoading,
     error,
     loadingMessage,
     journal,
@@ -43,17 +41,15 @@ const App: React.FC = () => {
     startCreation,
     setGameStage,
     retryLastAction,
-    textSize,
     animationsEnabled,
-    updatedTabs,
-    clearUpdatedTabs,
-    initializeCache,
+    theme,
+    magicIsHappening,
   } = useGameStore(state => ({
     gameStage: state.gameStage,
     currentScene: state.currentScene,
     storyHistory: state.storyHistory,
-    isLoading: state.isLoading,
-    isImageLoading: state.isImageLoading,
+    gameStatus: state.gameStatus,
+    isSpeechLoading: state.isSpeechLoading,
     error: state.error,
     loadingMessage: state.loadingMessage,
     journal: state.journal,
@@ -67,16 +63,19 @@ const App: React.FC = () => {
     startCreation: state.startCreation,
     setGameStage: state.setGameStage,
     retryLastAction: state.retryLastAction,
-    textSize: state.textSize,
     animationsEnabled: state.animationsEnabled,
-    updatedTabs: state.updatedTabs,
-    clearUpdatedTabs: state.clearUpdatedTabs,
-    initializeCache: state.initializeCache,
+    theme: state.theme,
+    magicIsHappening: state.magicIsHappening,
   }));
 
+  const isLoading = gameStatus !== 'idle' && gameStatus !== 'error';
+  const isImageLoading = gameStatus === 'generatingImage';
+
+
   useEffect(() => {
-    initializeCache();
-  }, [initializeCache]);
+    document.documentElement.setAttribute('data-theme', theme);
+  }, [theme]);
+
   
   useEffect(() => {
     // This effect ensures that if a saved game exists, we skip prologues/creation
@@ -90,16 +89,14 @@ const App: React.FC = () => {
       startPrologue();
     }
   }, [gameStage, startPrologue, setGameStage, playerCharacter]);
-  
-  useEffect(() => {
-    if (updatedTabs.length > 0) {
-      const timer = setTimeout(() => {
-        clearUpdatedTabs();
-      }, 5000); // Glow for 5 seconds
-      return () => clearTimeout(timer);
-    }
-  }, [updatedTabs, clearUpdatedTabs]);
 
+  useEffect(() => {
+    const handleUnload = () => blobManager.cleanupAll();
+    window.addEventListener('beforeunload', handleUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleUnload);
+    };
+  }, []);
 
   const handleBegin = useCallback(() => {
     startCreation().then(success => {
@@ -117,11 +114,11 @@ const App: React.FC = () => {
   }, []);
   
   const loadingFallback = (
-    <div className="min-h-screen text-slate-300 flex flex-col items-center justify-center p-4">
+    <div className="min-h-screen text-text-primary flex flex-col items-center justify-center p-4">
       <Header />
       <div className="mt-8 flex items-center gap-4">
         <LoadingIndicator className="h-8 w-8" />
-        <p className="text-xl text-violet-300 font-heading">Awakening the threads of fate...</p>
+        <p className="text-xl text-accent-primary font-heading">Awakening the threads of fate...</p>
       </div>
     </div>
   );
@@ -151,7 +148,7 @@ const App: React.FC = () => {
   
   if (!currentScene) return null; // Should not happen in playing state after loading
 
-  const appClasses = `min-h-screen text-slate-300 flex flex-col items-center p-4 sm:p-6 md:p-8 selection:bg-violet-500/30 selection:text-white ${textSize} ${animationsEnabled ? '' : 'animations-disabled'}`;
+  const appClasses = `min-h-screen text-text-primary flex flex-col p-4 sm:p-6 md:p-8 selection:bg-accent-primary/30 selection:text-white ${animationsEnabled ? '' : 'animations-disabled'}`;
 
   return (
     <div className={appClasses}>
@@ -159,16 +156,19 @@ const App: React.FC = () => {
       <SettingsPanel />
       <ToastNotifications />
 
-      <main className="w-full max-w-screen-xl flex-grow grid grid-cols-1 lg:grid-cols-5 gap-8 mt-6">
+      <main className="w-full max-w-screen-2xl mx-auto flex-grow grid grid-cols-1 lg:grid-cols-12 gap-6 xl:gap-8 mt-6 lg:max-h-[85vh]">
+        {/* === Left Column: Image Display === */}
         <ImageDisplay 
           imageUrl={currentScene?.imageUrl} 
           isLoading={isImageLoading}
-          className="lg:col-span-3"
+          magicIsHappening={magicIsHappening}
+          className="lg:col-span-4 xl:col-span-3 h-full"
         />
 
-        <div className="bg-slate-900 rounded-xl p-6 flex flex-col ring-1 ring-violet-400/30 shadow-2xl shadow-violet-950/20 max-h-[85vh] lg:max-h-full lg:col-span-2 animate-subtle-glow">
+        {/* === Center Column: Story & Actions === */}
+        <div className="bg-surface rounded-xl p-4 sm:p-6 flex flex-col ring-1 ring-border max-h-[85vh] lg:max-h-full lg:col-span-4 xl:col-span-5 animate-subtle-glow">
           {error && (
-            <div role="alert" className="border border-red-500/50 bg-red-900/30 text-red-300 p-3 rounded-lg mb-4 flex flex-col sm:flex-row items-center gap-3 font-ui">
+            <div role="alert" className="border border-error/50 bg-error-bg text-error p-3 rounded-lg mb-4 flex flex-col sm:flex-row items-center gap-3 font-ui">
               <div className="flex items-center gap-3">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
@@ -177,46 +177,11 @@ const App: React.FC = () => {
               </div>
               <button
                 onClick={retryLastAction}
-                className="ml-auto mt-2 sm:mt-0 px-3 py-1 bg-red-500/40 hover:bg-red-500/60 text-white font-bold rounded-md transition-colors duration-200 text-sm"
+                className="ml-auto mt-2 sm:mt-0 px-3 py-1 bg-error/40 hover:bg-error/60 text-white font-bold rounded-md transition-colors duration-200 text-sm"
               >
                 Retry
               </button>
             </div>
-          )}
-
-          {playerCharacter && (
-            <>
-              <Tabs
-                tabs={['Character', 'Journal', 'Inventory', 'World', 'People', 'Factions']}
-                activeTab={activeTab}
-                onTabChange={setActiveTab}
-                updatedTabs={updatedTabs}
-              />
-              <div className="mb-4 flex-shrink-0" key={activeTab}>
-                <div className="animate-fade-in-fast">
-                  {activeTab === 'Character' && (
-                    <div id="tabpanel-character" role="tabpanel" aria-labelledby="tab-character">
-                      <CharacterSheet character={playerCharacter} />
-                    </div>
-                  )}
-                  {activeTab === 'Journal' && (
-                     <JournalPanel journal={journal} />
-                  )}
-                   {activeTab === 'Inventory' && (
-                     <InventoryPanel inventory={inventory} />
-                  )}
-                  {activeTab === 'World' && (
-                     <WorldPanel world={world} />
-                  )}
-                  {activeTab === 'People' && (
-                     <PeoplePanel dramatisPersonae={dramatisPersonae} />
-                  )}
-                   {activeTab === 'Factions' && (
-                     <FactionsPanel reputation={reputation} />
-                  )}
-                </div>
-              </div>
-            </>
           )}
           
           <StoryPanel storyHistory={storyHistory} isLoading={isLoading && !isImageLoading} />
@@ -225,14 +190,13 @@ const App: React.FC = () => {
             {isLoading && !isImageLoading && (
               <div className="my-4 flex justify-center items-center gap-3">
                 <LoadingIndicator />
-                <p className="text-violet-400 animate-pulse font-heading">{loadingMessage}</p>
+                <p className="text-accent-primary animate-pulse font-heading">{isSpeechLoading ? 'Narrating the story...' : loadingMessage}</p>
               </div>
             )}
              {(storyHistory.length > 0 && !(isLoading && !isImageLoading) && storyHistory[storyHistory.length - 1]?.description !== '...') && (
-               <hr className="my-4 border-t-2 border-dashed border-slate-700/40" />
+               <hr className="my-4 border-t border-dashed border-border" />
              )}
           </div>
-
 
           <div className="mt-auto pt-4">
             <ActionInput
@@ -241,8 +205,38 @@ const App: React.FC = () => {
               disabled={isLoading || isGameOver}
               isCreatingCharacter={!playerCharacter}
               allowCustomAction={currentScene?.allowCustomAction}
+              allowExamineAction={currentScene?.allowExamineAction}
             />
           </div>
+        </div>
+
+        {/* === Right Column: The Codex === */}
+        <div className="lg:col-span-4 xl:col-span-4 lg:max-h-full">
+            {playerCharacter && (
+               <CodexSidebar>
+                  <CodexSidebar.Section title="Character">
+                     <CharacterSheet character={playerCharacter} />
+                  </CodexSidebar.Section>
+                  <CodexSidebar.Section title="Journal">
+                      <JournalPanel journal={journal} />
+                  </CodexSidebar.Section>
+                   <CodexSidebar.Section title="Lore">
+                      <LorePanel />
+                  </CodexSidebar.Section>
+                  <CodexSidebar.Section title="Inventory">
+                      <InventoryPanel inventory={inventory} />
+                  </CodexSidebar.Section>
+                   <CodexSidebar.Section title="World">
+                      <WorldPanel world={world} />
+                  </CodexSidebar.Section>
+                  <CodexSidebar.Section title="People">
+                      <PeoplePanel dramatisPersonae={dramatisPersonae} />
+                  </CodexSidebar.Section>
+                   <CodexSidebar.Section title="Factions">
+                      <FactionsPanel reputation={reputation} />
+                  </CodexSidebar.Section>
+              </CodexSidebar>
+            )}
         </div>
       </main>
       
@@ -252,19 +246,6 @@ const App: React.FC = () => {
           onPlayAgain={handlePlayAgain}
         />
       )}
-      <style>{`
-        .animate-subtle-glow {
-          animation: subtle-glow 8s ease-in-out infinite;
-        }
-
-        @keyframes fade-in-fast {
-          from { opacity: 0; transform: translateY(5px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .animate-fade-in-fast {
-          animation: fade-in-fast 0.3s ease-out forwards;
-        }
-      `}</style>
     </div>
   );
 };

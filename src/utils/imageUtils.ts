@@ -1,3 +1,5 @@
+import { blobManager } from './blobManager';
+
 // A helper function to convert a base64 string into a more memory-efficient blob URL.
 export const base64ToBlobUrl = (base64: string, mimeType: string): string => {
     try {
@@ -8,7 +10,7 @@ export const base64ToBlobUrl = (base64: string, mimeType: string): string => {
         }
         const byteArray = new Uint8Array(byteNumbers);
         const blob = new Blob([byteArray], { type: mimeType });
-        return URL.createObjectURL(blob);
+        return blobManager.create(blob);
     } catch (e) {
         console.error("Failed to convert base64 to blob URL", e);
         // Fallback to data URI if conversion fails

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useMemo } from 'react';
+import React, { useEffect, useRef, useState, Fragment } from 'react';
 import type { StoryTurn } from '../../types/game';
 
 interface StoryPanelProps {
@@ -20,95 +20,122 @@ const PlayerActionIcon = () => (
 
 const ThinkingIndicator = () => (
     <div className="flex gap-1.5 items-center">
-        <span className="h-1.5 w-1.5 bg-violet-400 rounded-full animate-pulse-fast" style={{ animationDelay: '0s' }}></span>
-        <span className="h-1.5 w-1.5 bg-violet-400 rounded-full animate-pulse-fast" style={{ animationDelay: '0.15s' }}></span>
-        <span className="h-1.5 w-1.5 bg-violet-400 rounded-full animate-pulse-fast" style={{ animationDelay: '0.3s' }}></span>
+        <span className="h-1.5 w-1.5 bg-accent-primary rounded-full animate-pulse-fast" style={{ animationDelay: '0s' }}></span>
+        <span className="h-1.5 w-1.5 bg-accent-primary rounded-full animate-pulse-fast" style={{ animationDelay: '0.15s' }}></span>
+        <span className="h-1.5 w-1.5 bg-accent-primary rounded-full animate-pulse-fast" style={{ animationDelay: '0.3s' }}></span>
     </div>
 );
 
 
-const StreamedText = React.memo(({ text }: { text: string }) => {
+const StreamedNarrative = React.memo(({ text }: { text: string }) => {
   const [displayedText, setDisplayedText] = useState('');
   const [isComplete, setIsComplete] = useState(false);
-  const timerRef = useRef<number | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
 
   useEffect(() => {
-    if (timerRef.current) clearInterval(timerRef.current);
+    if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
     
     if (text === '...') {
-      setDisplayedText(''); // Let the ThinkingIndicator handle this state visually
+      setDisplayedText('');
       setIsComplete(true);
       return;
     }
 
+    // If text changes to something shorter or different, reset immediately
+    if (!text.startsWith(displayedText)) {
+      setDisplayedText('');
+    }
+
     if (displayedText.length >= text.length) {
-      if (displayedText !== text) setDisplayedText(text); // Catch up if props update faster than animation
+      if (displayedText !== text) setDisplayedText(text);
       setIsComplete(true);
       return;
     }
 
     setIsComplete(false);
+    
+    const startTime = performance.now();
+    const initialLength = displayedText.length;
+    const typingSpeed = 50; // characters per second
 
-    timerRef.current = window.setInterval(() => {
-      // Use a function for setDisplayedText to get the latest state
-      setDisplayedText(prev => {
-        if (prev.length < text.length) {
-          return text.substring(0, prev.length + 1);
-        } else {
-          if (timerRef.current) clearInterval(timerRef.current);
-          setIsComplete(true);
-          return prev;
-        }
-      });
-    }, 15); // Speed for characters
+    const animate = (currentTime: number) => {
+      const elapsedTime = currentTime - startTime;
+      const charactersToShow = Math.floor(elapsedTime / 1000 * typingSpeed);
+      const newLength = Math.min(text.length, initialLength + charactersToShow);
+
+      setDisplayedText(text.substring(0, newLength));
+
+      if (newLength < text.length) {
+        animationFrameRef.current = requestAnimationFrame(animate);
+      } else {
+        setIsComplete(true);
+      }
+    };
+
+    animationFrameRef.current = requestAnimationFrame(animate);
 
     return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
+      if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
     };
-  }, [text]); // Re-run effect when target text changes
+  }, [text]);
 
   const skipAnimation = () => {
     if (!isComplete) {
-      if (timerRef.current) clearInterval(timerRef.current);
+      if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
       setDisplayedText(text);
       setIsComplete(true);
     }
   };
+
+  const renderText = (textToRender: string) => {
+    const parts = textToRender.split(/(".*?")/g).filter(Boolean);
+    return parts.map((part, index) => {
+        if (part.startsWith('"') && part.endsWith('"')) {
+            // Dialogue
+            return (
+                <em key={index} className="text-accent-secondary not-italic font-normal">
+                    {part}
+                </em>
+            );
+        }
+        // Narrative
+        return <Fragment key={index}>{part}</Fragment>;
+    });
+  };
   
   return (
-    <p onClick={skipAnimation} className="text-slate-300 text-lg leading-relaxed whitespace-pre-wrap font-body" style={{ cursor: isComplete ? 'default' : 'pointer' }}>
-        {displayedText}
-        {!isComplete && <span className="inline-block w-2 h-5 bg-slate-300 ml-1 animate-pulse" style={{ animation: 'pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite' }} />}
+    <p onClick={skipAnimation} className="text-text-primary text-lg leading-relaxed whitespace-pre-wrap font-body" style={{ cursor: isComplete ? 'default' : 'pointer' }}>
+        {renderText(displayedText)}
+        {!isComplete && <span className="inline-block w-2 h-5 bg-text-primary ml-1 animate-pulse" style={{ animation: 'pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite' }} />}
     </p>
   );
 });
 
-
-// Memoized component for a single story turn to prevent re-rendering of the entire list.
 const Turn = React.memo(({ turn, index }: { turn: StoryTurn; index: number }) => {
   const isPlayerTurn = index > 0 && !!turn.action;
 
   if (isPlayerTurn) {
     return (
-      <div className="animate-slide-in-right ml-auto max-w-prose">
-        <h3 id={`turn-heading-${index}`} className="text-violet-300 text-lg mb-1 font-ui italic flex items-center justify-end gap-2">
-          <span>{turn.action}</span>
-          <PlayerActionIcon />
-        </h3>
+      <div className="animate-slide-in-right ml-auto max-w-prose my-2">
+        <div id={`turn-heading-${index}`} className="bg-accent-primary/10 border-r-4 border-accent-primary p-3 rounded-l-lg">
+            <h3 className="text-accent-primary text-lg font-ui italic flex items-center justify-end gap-2">
+            <span>{turn.action}</span>
+            <PlayerActionIcon />
+            </h3>
+        </div>
       </div>
     );
   }
 
-  // For initial turns or narrative exposition without a preceding player action
   return (
-    <section aria-labelledby={`turn-heading-${index}`} className="animate-fade-in-up bg-slate-800/30 p-4 rounded-lg border-l-4 border-violet-400/50">
+    <section aria-labelledby={`turn-heading-${index}`} className="animate-fade-in-up bg-surface-muted/30 p-4 rounded-lg border-l-4 border-accent-primary/50">
       {turn.action && (
-        <h3 id={`turn-heading-${index}`} className="text-violet-300 font-bold text-lg mb-2 font-heading flex items-center gap-2">
+        <h3 id={`turn-heading-${index}`} className="text-accent-primary font-bold text-lg mb-2 font-heading flex items-center gap-2">
           <NarrativeIcon />
           <span>{turn.action}</span>
         </h3>
       )}
-      {turn.description === '...' ? <ThinkingIndicator /> : <StreamedText text={turn.description} />}
+      {turn.description === '...' ? <ThinkingIndicator /> : <StreamedNarrative text={turn.description} />}
     </section>
   );
 });
@@ -117,16 +144,23 @@ const Turn = React.memo(({ turn, index }: { turn: StoryTurn; index: number }) =>
 const StoryPanel: React.FC<StoryPanelProps> = ({ storyHistory, isLoading }) => {
   const panelRef = useRef<HTMLDivElement>(null);
   const isAtBottomRef = useRef(true);
+  const [showScrollButton, setShowScrollButton] = useState(false);
 
-
-  useEffect(() => {
+  const handleScroll = () => {
     const panel = panelRef.current;
     if (panel) {
-        const isScrolledToBottom = panel.scrollHeight - panel.clientHeight <= panel.scrollTop + 20; // 20px buffer
-        isAtBottomRef.current = isScrolledToBottom;
+      const isScrolledUp = panel.scrollHeight - panel.clientHeight - panel.scrollTop > 100;
+      setShowScrollButton(isScrolledUp);
+      isAtBottomRef.current = !isScrolledUp;
     }
-  }, [storyHistory]);
-
+  };
+  
+  const scrollToBottom = () => {
+    panelRef.current?.scrollTo({
+        top: panelRef.current.scrollHeight,
+        behavior: 'smooth'
+    });
+  };
 
   useEffect(() => {
     if (panelRef.current && isAtBottomRef.current) {
@@ -135,51 +169,32 @@ const StoryPanel: React.FC<StoryPanelProps> = ({ storyHistory, isLoading }) => {
   }, [storyHistory, isLoading]);
 
   return (
-    <div ref={panelRef} className="flex-grow overflow-y-auto pr-4 -mr-4 custom-scrollbar">
-      <div className="space-y-6" aria-live="polite">
-        {storyHistory.map((turn, index) => {
-          // Using index as a key is acceptable here because the list is append-only and never re-ordered.
-          return <Turn key={index} turn={turn} index={index} />;
-        })}
-      </div>
+    <div className="flex-grow relative">
+        <div ref={panelRef} onScroll={handleScroll} className="absolute inset-0 overflow-y-auto pr-4 -mr-4 custom-scrollbar">
+            <div className="space-y-6" aria-live="polite">
+                {storyHistory.map((turn, index) => {
+                return <Turn key={index} turn={turn} index={index} />;
+                })}
+            </div>
+        </div>
+        {showScrollButton && (
+            <button
+                onClick={scrollToBottom}
+                aria-label="Scroll to latest message"
+                className="absolute bottom-2 right-6 z-10 p-2 bg-surface/70 backdrop-blur-sm rounded-full text-accent-primary hover:bg-accent-primary/80 hover:text-white transition-all duration-200 animate-fade-in focus:outline-none focus:ring-2 focus:ring-accent-primary"
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 13l-7 7-7-7m14-8l-7 7-7-7" />
+                </svg>
+            </button>
+        )}
        <style>{`
-        @keyframes fade-in-up {
-          from { opacity: 0; transform: translateY(10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .animate-fade-in-up {
-          animation: fade-in-up 0.5s ease-out forwards;
-        }
-
-        @keyframes slide-in-right {
-          from { opacity: 0; transform: translateX(20px); }
-          to { opacity: 1; transform: translateX(0); }
-        }
-        .animate-slide-in-right {
-          animation: slide-in-right 0.3s ease-out forwards;
-        }
-        
         @keyframes pulse-fast {
             0%, 100% { opacity: 0.5; transform: scale(0.9); }
             50% { opacity: 1; transform: scale(1.1); }
         }
         .animate-pulse-fast {
             animation: pulse-fast 1.2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-        }
-
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 8px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: rgba(255, 255, 255, 0.05);
-          border-radius: 10px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: #8b5cf6; /* violet-500 */
-          border-radius: 10px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: #7c3aed; /* violet-600 */
         }
       `}</style>
     </div>

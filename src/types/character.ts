@@ -21,4 +21,6 @@ export interface CharacterProfile {
   initialPersonalityLean: PersonalityLean; // The choice made during creation
   personality: Record<PersonalityLean, number>; // Evolving scores
   visualMark: VisualMark;
+  veinStrain: number; // Evolving stat tracking physical toll of magic
+  echoLevel: number; // Evolving stat tracking magical signature
 }

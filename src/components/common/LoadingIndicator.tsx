@@ -6,7 +6,7 @@ interface LoadingIndicatorProps {
 
 const LoadingIndicator: React.FC<LoadingIndicatorProps> = ({ className = 'h-5 w-5' }) => {
   return (
-    <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" className={`${className} text-violet-400`}>
+    <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" className={`${className} text-accent-primary`}>
         <style>{`
             .rune-path {
                 stroke: currentColor;

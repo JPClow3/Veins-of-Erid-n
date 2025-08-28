@@ -2,6 +2,7 @@
 
 import { generateSpeechAudio } from '../features/game/gameService';
 import { base64ToBlobUrl } from './imageUtils';
+import { blobManager } from './blobManager';
 import logger from './logger';
 
 class NarrationManager {
@@ -17,10 +18,8 @@ class NarrationManager {
   }
 
   private cleanup() {
-    if (this.currentBlobUrl) {
-      URL.revokeObjectURL(this.currentBlobUrl);
-      this.currentBlobUrl = null;
-    }
+    blobManager.revoke(this.currentBlobUrl);
+    this.currentBlobUrl = null;
   }
 
   async speak(text: string) {

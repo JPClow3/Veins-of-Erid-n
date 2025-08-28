@@ -14,10 +14,12 @@ interface IntroSequenceProps {
 
 const IntroSequence: React.FC<IntroSequenceProps> = ({ storyHistory, isLoading, currentScene, onAction }) => {
   return (
-    <div className="min-h-screen text-slate-200 flex flex-col items-center justify-center p-4">
-      <Header />
+    <div className="min-h-screen text-text-primary flex flex-col items-center justify-center p-4">
+      <div className="animate-fade-in-up">
+        <Header />
+      </div>
       <main className="w-full max-w-4xl flex-grow flex flex-col justify-center mt-6">
-        <div className="bg-slate-900 rounded-xl p-6 flex flex-col ring-1 ring-violet-400/30 shadow-2xl shadow-violet-950/20 h-[70vh]">
+        <div className="bg-surface rounded-xl p-6 flex flex-col ring-1 ring-border shadow-2xl shadow-glow-primary h-[70vh]">
           {storyHistory.length > 0 ? (
             <>
               <StoryPanel storyHistory={storyHistory} isLoading={isLoading} />
@@ -34,7 +36,7 @@ const IntroSequence: React.FC<IntroSequenceProps> = ({ storyHistory, isLoading, 
           ) : (
             <div className="flex items-center justify-center h-full gap-4">
                 <LoadingIndicator className="h-8 w-8" />
-                <p className="text-xl text-violet-300 font-heading">Awakening the threads of fate...</p>
+                <p className="text-xl text-accent-primary font-heading">Awakening the threads of fate...</p>
               </div>
           )}
         </div>

@@ -31,19 +31,19 @@ export const BACKGROUNDS = {
 
 export const AFFINITIES = {
   // Common
-  'Emberflow': { name: 'Emberflow (Fire)', description: 'Passionate, destructive, and volatile.', rarity: 'Common' },
-  'Stoneflow': { name: 'Stoneflow (Earth)', description: 'Enduring, defensive, and resolute.', rarity: 'Common' },
-  'Tideflow': { name: 'Tideflow (Water)', description: 'Fluid, adaptable, and cleansing.', rarity: 'Common' },
-  'Zephyrflow': { name: 'Zephyrflow (Air)', description: 'Swift, elusive, and insightful.', rarity: 'Common' },
+  'Emberflow': { name: 'Emberflow (Fire)', description: 'Resonating with thermal energy to create heat and flame.', rarity: 'Common' },
+  'Stoneflow': { name: 'Stoneflow (Earth)', description: 'Resonating with telluric currents to manipulate stone and soil.', rarity: 'Common' },
+  'Tideflow': { name: 'Tideflow (Water)', description: 'Resonating with hydrostatic pressure to command liquids.', rarity: 'Common' },
+  'Zephyrflow': { name: 'Zephyrflow (Air)', description: 'Resonating with atmospheric pressure to shape wind and sound.', rarity: 'Common' },
   // Uncommon
-  'Bloomflow': { name: 'Bloomflow (Growth)', description: 'Nurturing, subtle, and regenerative.', rarity: 'Uncommon' },
-  'Stormflow': { name: 'Stormflow (Lightning)', description: 'Volatile, quick, and intimidating.', rarity: 'Uncommon' },
-  'Shadeflow': { name: 'Shadeflow (Shadow)', description: 'Elusive, secretive, and feared.', rarity: 'Uncommon' },
-  'Crystalflow': { name: 'Crystalflow (Crystal)', description: 'Focused, sharp, and resonant.', rarity: 'Uncommon' },
+  'Bloomflow': { name: 'Bloomflow (Growth)', description: 'Resonating with the life force of flora and fauna.', rarity: 'Uncommon' },
+  'Stormflow': { name: 'Stormflow (Lightning)', description: 'Resonating with electrostatic energy to generate electricity.', rarity: 'Uncommon' },
+  'Shadeflow': { name: 'Shadeflow (Shadow)', description: 'Resonating with ambient light to create darkness and illusions.', rarity: 'Uncommon' },
+  'Crystalflow': { name: 'Crystalflow (Crystal)', description: 'Resonating with crystalline structures to amplify and focus energy.', rarity: 'Uncommon' },
   // Rare
-  'Aetherflow': { name: 'Aetherflow (Void)', description: 'Mysterious, consuming, and spatial.', rarity: 'Rare' },
-  'Chronoflow': { name: 'Chronoflow (Time)', description: 'Inevitable, patient, and reality-bending.', rarity: 'Rare' },
-  'Soulflow': { name: 'Soulflow (Spirit)', description: 'Empathic, commanding, and ethereal.', rarity: 'Rare' },
+  'Aetherflow': { name: 'Aetherflow (Void)', description: 'Resonating with the fabric of space itself, a dangerous and unstable power.', rarity: 'Rare' },
+  'Chronoflow': { name: 'Chronoflow (Time)', description: 'Resonating with temporal echoes, allowing glimpses of what was and could be.', rarity: 'Rare' },
+  'Soulflow': { name: 'Soulflow (Spirit)', description: 'Resonating with the consciousness and life essence of living things.', rarity: 'Rare' },
 } as const;
 
 

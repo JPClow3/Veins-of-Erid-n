@@ -16,10 +16,10 @@ const ToastMessage: React.FC<{ toast: Toast; onRemove: (id: number) => void }> =
   }, [toast.id, onRemove]);
 
   const typeClasses = {
-    info: 'bg-slate-800/80 border-violet-500/50 text-violet-300',
-    success: 'bg-teal-900/80 border-teal-500/50 text-teal-200',
-    warning: 'bg-yellow-900/80 border-yellow-500/50 text-yellow-200',
-    error: 'bg-red-900/80 border-red-500/50 text-red-300',
+    info: 'bg-surface/80 border-accent-primary/50 text-accent-primary',
+    success: 'bg-surface/80 border-teal-500/50 text-teal-200', // Assuming teal for success
+    warning: 'bg-surface/80 border-yellow-500/50 text-yellow-200', // Assuming yellow for warning
+    error: 'bg-error-bg border-error/50 text-error',
   };
 
   const animationClass = isExiting ? 'animate-toast-out' : 'animate-toast-in';
@@ -28,10 +28,10 @@ const ToastMessage: React.FC<{ toast: Toast; onRemove: (id: number) => void }> =
     <div
       role="status"
       aria-live="polite"
-      className={`relative w-full max-w-sm p-3 rounded-lg shadow-2xl shadow-slate-950/50 border-l-4 font-ui text-sm font-semibold backdrop-blur-md ${typeClasses[toast.type]} ${animationClass}`}
+      className={`relative w-full max-w-sm p-3 rounded-lg shadow-2xl shadow-background/50 border-l-4 font-ui text-sm font-semibold backdrop-blur-md ${typeClasses[toast.type]} ${animationClass}`}
     >
       {toast.message}
-      <button onClick={() => onRemove(toast.id)} className="absolute top-1 right-1 text-slate-400 hover:text-white">&times;</button>
+      <button onClick={() => onRemove(toast.id)} className="absolute top-1 right-1 text-text-secondary hover:text-text-primary">&times;</button>
     </div>
   );
 };
@@ -48,6 +48,14 @@ const ToastNotifications = () => {
         <ToastMessage key={toast.id} toast={toast} onRemove={removeToast} />
       ))}
       <style>{`
+        @keyframes toast-in {
+            from { transform: translateX(100%) scale(0.9); opacity: 0; }
+            to { transform: translateX(0) scale(1); opacity: 1; }
+        }
+        @keyframes toast-out {
+            from { transform: translateX(0) scale(1); opacity: 1; }
+            to { transform: translateX(100%) scale(0.9); opacity: 0; }
+        }
         .animate-toast-in {
             animation: toast-in 0.3s ease-out forwards;
         }
