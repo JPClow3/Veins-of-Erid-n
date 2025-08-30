@@ -1,5 +1,5 @@
 import React, { memo } from 'react';
-import type { CharacterProfile, PersonalityLean } from '../../types/character';
+import type { CharacterProfile, PersonalityLean, Weave } from '../../types/character';
 import { AFFINITIES, VISUAL_MARKS } from '../../constants/gameConstants';
 
 interface CharacterSheetProps {
@@ -45,10 +45,10 @@ const RarityBadge: React.FC<{ rarity: 'Common' | 'Uncommon' | 'Rare' }> = ({ rar
     return <span className={`ml-2 text-xs font-ui font-bold px-2 py-0.5 rounded-full ${rarityClasses[rarity]}`}>{rarity}</span>
 }
 
-const StatBar: React.FC<{ label: string; value: number; max: number; tooltip: string; colorClasses: { bg: string; shadow: string; } }> = ({ label, value, max, tooltip, colorClasses }) => {
+const StatBar: React.FC<{ label: string; value: number; max: number; tooltip: string; colorClasses: { bg: string; shadow: string; }; isPulsing?: boolean; }> = ({ label, value, max, tooltip, colorClasses, isPulsing = false }) => {
     const percentage = Math.max(0, (value / max) * 100);
     return (
-        <div className="w-full group relative">
+        <div className={`w-full group relative ${isPulsing ? 'animate-pulse-glow' : ''}`}>
             <div className="flex justify-between items-center mb-1">
                 <span className="font-semibold text-text-secondary font-ui text-xs uppercase tracking-wider">{label}</span>
                 <span className={`font-ui text-sm font-bold ${colorClasses.bg.replace('bg-', 'text-')}`}>{value} / {max}</span>
@@ -136,6 +136,16 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character }) => {
         </div>
     </div>
   );
+  
+  const dormantAffinityValue = (
+    <div className="relative group">
+        <span className="italic text-text-secondary">Unknown Resonance</span>
+        <div className="absolute bottom-full mb-2 left-0 w-max max-w-xs bg-surface text-text-primary text-sm rounded-md p-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none shadow-lg ring-1 ring-border z-10 font-body">
+            <p className="font-bold text-accent-secondary">Dormant Affinity</p>
+            <p className="font-normal whitespace-normal italic">“A second, hidden power slumbers within you, waiting for a moment of true crisis to awaken.”</p>
+        </div>
+    </div>
+  );
 
   return (
     <div className="bg-surface-muted/30 rounded-lg p-4 ring-1 ring-border flex-shrink-0">
@@ -146,7 +156,7 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character }) => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
             <Attribute icon={<IconGender />} label="Identity" value={character.gender} />
             <Attribute icon={<IconOrigin />} label="Origin" value={character.background} />
-            <div className="relative group flex items-start gap-3">
+            <div className="relative group flex items-start gap-3 md:col-span-2">
                 <div className="text-accent-secondary mt-1 shrink-0"><IconMark /></div>
                 <div>
                   <div className="font-semibold text-text-secondary font-ui text-xs uppercase tracking-wider">Flow Vein Mark</div>
@@ -161,6 +171,7 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character }) => {
              <div className={`p-2 -m-2 rounded-lg border transition-all duration-300 ${rarityClasses[affinityRarity]}`}>
                 <Attribute icon={<IconAffinity />} label="Awakened Affinity" value={affinityValue} />
              </div>
+             <Attribute icon={<span className="opacity-50"><IconAffinity /></span>} label="Dormant Affinity" value={dormantAffinityValue} />
         </div>
         
         <div>
@@ -191,6 +202,7 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character }) => {
                     max={MAX_STRAIN}
                     tooltip="The physical toll of channeling Flow. High strain can have dangerous consequences."
                     colorClasses={getStrainColor(character.veinStrain, MAX_STRAIN)}
+                    isPulsing={character.veinStrain > 70}
                 />
                  <StatBar 
                     label="Echo Level"
@@ -201,6 +213,23 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character }) => {
                 />
             </div>
         </div>
+
+        <div>
+            <h4 className="font-semibold text-text-secondary font-ui text-xs uppercase tracking-wider mb-3">Known Weaves</h4>
+            {character.knownWeaves && character.knownWeaves.length > 0 ? (
+                <div className="space-y-2 max-h-24 overflow-y-auto custom-scrollbar pr-2 -mr-2">
+                    {character.knownWeaves.map((weave: Weave) => (
+                        <div key={weave.name} className="p-2 bg-surface rounded-md text-sm ring-1 ring-border/50">
+                            <p className="font-bold text-accent-secondary font-ui">{weave.name} <span className="text-xs font-light text-text-secondary">({weave.affinity})</span></p>
+                            <p className="italic text-text-primary font-body">{weave.description}</p>
+                        </div>
+                    ))}
+                </div>
+            ) : (
+                <p className="text-text-secondary text-sm italic font-body">You have not yet learned any formal magical weaves.</p>
+            )}
+        </div>
+
       </div>
     </div>
   );

@@ -1,6 +1,7 @@
 import React, { useState, Fragment } from 'react';
 import type { DramatisPersonae } from '../../types/game';
 import { FACTIONS } from '../../constants/gameConstants';
+import useGameStore from '../../store/gameStore';
 
 interface PeoplePanelProps {
   dramatisPersonae: DramatisPersonae;
@@ -30,6 +31,13 @@ const FactionIcon: React.FC<{ factionName: string }> = ({ factionName }) => {
 };
 
 const NpcDetailModal: React.FC<{ npc: NpcWithDetails, onClose: () => void }> = ({ npc, onClose }) => {
+    const { setHighlightedTab } = useGameStore(state => ({ setHighlightedTab: state.setHighlightedTab }));
+
+    const handleFactionClick = () => {
+        setHighlightedTab('Factions');
+        onClose();
+    };
+
     return (
         <div className="fixed inset-0 flex items-center justify-center p-4 z-50" aria-modal="true" role="dialog">
             <div className="absolute inset-0 bg-black/70 backdrop-blur-sm animate-fade-in" onClick={onClose} />
@@ -37,7 +45,9 @@ const NpcDetailModal: React.FC<{ npc: NpcWithDetails, onClose: () => void }> = (
                 <div className="flex justify-between items-start mb-4">
                     <div>
                         <h3 className="text-2xl font-bold text-accent-primary font-heading">{npc.name}</h3>
-                        <p className="text-accent-secondary font-ui text-sm font-semibold">{npc.role} - {npc.faction}</p>
+                        <p className="text-accent-secondary font-ui text-sm font-semibold">
+                            {npc.role} - <button onClick={handleFactionClick} className="underline decoration-dotted hover:decoration-solid hover:text-accent-primary-hover transition">{npc.faction}</button>
+                        </p>
                     </div>
                      <button onClick={onClose} className="p-1 rounded-full text-text-secondary hover:bg-surface-muted hover:text-text-primary transition-colors focus:outline-none focus:ring-2 focus:ring-accent-primary">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

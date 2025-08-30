@@ -47,7 +47,7 @@ const Section: React.FC<SectionProps> = ({ title, children, isOpen, onToggle }) 
 };
 
 const CodexSidebar: React.FC<CodexSidebarProps> & { Section: React.FC<Omit<SectionProps, 'isOpen' | 'onToggle'>> } = ({ children }) => {
-  const [openSection, setOpenSection] = useState<string | null>('Character');
+  const [openSections, setOpenSections] = useState<string[]>(['Character']);
   const { highlightedTab, clearUpdatedTabs, setHighlightedTab } = useGameStore(state => ({
     highlightedTab: state.highlightedTab,
     clearUpdatedTabs: state.clearUpdatedTabs,
@@ -56,7 +56,7 @@ const CodexSidebar: React.FC<CodexSidebarProps> & { Section: React.FC<Omit<Secti
   
   useEffect(() => {
     if (highlightedTab) {
-      setOpenSection(highlightedTab);
+      setOpenSections(prev => [...new Set([...prev, highlightedTab])]);
       const timer = setTimeout(() => {
         setHighlightedTab(null);
         clearUpdatedTabs();
@@ -66,11 +66,15 @@ const CodexSidebar: React.FC<CodexSidebarProps> & { Section: React.FC<Omit<Secti
   }, [highlightedTab, clearUpdatedTabs, setHighlightedTab]);
   
   const handleToggle = (title: string, isOpen: boolean) => {
-    if (isOpen) {
-      setOpenSection(title);
-    } else if (openSection === title) {
-      setOpenSection(null);
-    }
+    setOpenSections(prev => {
+        const newSet = new Set(prev);
+        if (isOpen) {
+            newSet.add(title);
+        } else {
+            newSet.delete(title);
+        }
+        return Array.from(newSet);
+    });
   };
 
   return (
@@ -80,7 +84,7 @@ const CodexSidebar: React.FC<CodexSidebarProps> & { Section: React.FC<Omit<Secti
           if (isValidElement(child) && child.type === Section) {
             const { title } = child.props as { title: string };
             return cloneElement(child as React.ReactElement<SectionProps>, {
-              isOpen: openSection === title,
+              isOpen: openSections.includes(title),
               onToggle: (e: React.SyntheticEvent<HTMLDetailsElement>) => handleToggle(title, e.currentTarget.open),
             });
           }

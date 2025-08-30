@@ -1,6 +1,6 @@
 import React, { useState, memo } from 'react';
 import type { Choice } from '../../types/game';
-import type { PersonalityLean } from '../../types/character';
+import type { CharacterProfile, PersonalityLean } from '../../types/character';
 import { PERSONALITY_LEANS } from '../../constants/gameConstants';
 
 interface ActionInputProps {
@@ -8,6 +8,7 @@ interface ActionInputProps {
   onSubmit: (action: string) => void;
   disabled: boolean;
   isCreatingCharacter: boolean;
+  playerCharacter: CharacterProfile | null;
   allowCustomAction?: boolean;
   allowExamineAction?: boolean;
 }
@@ -24,7 +25,13 @@ const IconMap = {
   Lore: <IconLore />,
 };
 
-const ActionInput: React.FC<ActionInputProps> = ({ choices, onSubmit, disabled, isCreatingCharacter, allowCustomAction, allowExamineAction }) => {
+const getSuccessText = (score: number): { text: string; color: string } => {
+    if (score > 7) return { text: "High chance of success.", color: "text-green-400" };
+    if (score > 4) return { text: "A reasonable chance of success.", color: "text-yellow-400" };
+    return { text: "This approach is risky.", color: "text-orange-400" };
+};
+
+const ActionInput: React.FC<ActionInputProps> = ({ choices, onSubmit, disabled, isCreatingCharacter, playerCharacter, allowCustomAction, allowExamineAction }) => {
   const [customAction, setCustomAction] = useState('');
   const [name, setName] = useState('');
   const [submittedAction, setSubmittedAction] = useState<string | null>(null);
@@ -57,6 +64,12 @@ const ActionInput: React.FC<ActionInputProps> = ({ choices, onSubmit, disabled, 
         setSubmittedAction(null);
     }
   }, [disabled]);
+  
+  const highestPersonality = React.useMemo(() => {
+    if (!playerCharacter) return null;
+    return (Object.entries(playerCharacter.personality) as [PersonalityLean, number][])
+        .reduce((a, b) => a[1] > b[1] ? a : b)[0];
+  }, [playerCharacter]);
 
   const isNamePrompt = choices.length === 1 && typeof choices[0] === 'string' && choices[0] === 'PROMPT_FOR_NAME';
 
@@ -102,13 +115,17 @@ const ActionInput: React.FC<ActionInputProps> = ({ choices, onSubmit, disabled, 
           const choiceText = typeof choice === 'string' ? choice : choice.text;
           const choiceLean = typeof choice === 'string' ? undefined : choice.lean;
           const isSubmitting = submittedAction === choiceText;
+          const isAligned = !isCreatingCharacter && choiceLean && choiceLean !== 'Neutral' && choiceLean === highestPersonality;
+          
+          const leanScore = playerCharacter && choiceLean && choiceLean !== 'Neutral' ? playerCharacter.personality[choiceLean] : null;
+          const successInfo = leanScore !== null ? getSuccessText(leanScore) : null;
 
           return (
             <button
               key={index}
               onClick={() => handleChoiceClick(choiceText)}
               disabled={disabled}
-              className={`relative group text-left p-3 text-text-primary bg-surface-muted/50 hover:bg-surface-muted border-l-2 hover:border-l-4 border-border-accent hover:border-accent-secondary disabled:opacity-60 disabled:cursor-not-allowed rounded-r-lg transition-all duration-200 transform hover:scale-[1.02] active:scale-100 focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-opacity-75 font-ui flex items-center gap-3 hover:shadow-glow-secondary ${isSubmitting ? 'bg-accent-primary/30 border-accent-primary scale-95 opacity-80' : ''}`}
+              className={`relative group text-left p-3 text-text-primary bg-surface-muted/50 hover:bg-surface-muted border-l-2 hover:border-l-4 border-border-accent hover:border-accent-secondary disabled:opacity-60 disabled:cursor-not-allowed rounded-r-lg transition-all duration-200 transform hover:scale-[1.02] active:scale-100 focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-opacity-75 font-ui flex items-center gap-3 hover:shadow-glow-secondary ${isSubmitting ? 'bg-accent-primary/30 border-accent-primary scale-95 opacity-80' : ''} ${isAligned ? 'animate-strength-glow' : ''}`}
             >
               {choiceLean && choiceLean !== 'Neutral' && (
                 <>
@@ -116,8 +133,9 @@ const ActionInput: React.FC<ActionInputProps> = ({ choices, onSubmit, disabled, 
                     <span className="text-accent-secondary opacity-70 group-hover:opacity-100 transition-opacity">{IconMap[choiceLean]}</span>
                   </div>
                   <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-max max-w-xs bg-surface text-text-primary text-xs rounded-md py-1 px-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none shadow-lg ring-1 ring-border z-10 text-left">
-                    <p className="font-bold text-accent-secondary">{choiceLean}</p>
+                    <p className="font-bold text-accent-secondary">{choiceLean}{leanScore !== null ? ` (${leanScore})` : ''}</p>
                     <p className="font-normal whitespace-normal">{PERSONALITY_LEANS[choiceLean]}</p>
+                    {successInfo && <p className={`font-semibold mt-1 ${successInfo.color}`}>{successInfo.text}</p>}
                   </div>
                 </>
               )}

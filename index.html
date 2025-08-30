@@ -50,6 +50,7 @@
                 'ken-burns': 'ken-burns 30s ease-out forwards',
                 'codex-pulse': 'codex-pulse 2s ease-in-out infinite',
                 'pulse-glow-rare': 'pulse-glow-rare 3s ease-in-out infinite',
+                'strength-glow': 'strength-glow 1.5s ease-out',
              },
              keyframes: {
                 'fade-in': {
@@ -83,7 +84,12 @@
                 'ken-burns': {
                     '0%': { transform: 'scale(1) translate(0, 0)' },
                     '100%': { transform: 'scale(1.08) translate(-1%, 1%)' },
-                }
+                },
+                'strength-glow': {
+                    '0%': { 'box-shadow': 'inset 0 0 8px -4px transparent' },
+                    '50%': { 'box-shadow': 'inset 0 0 12px 2px var(--color-shadow-secondary)' },
+                    '100%': { 'box-shadow': 'inset 0 0 8px -4px transparent' },
+                },
              }
           }
         }
@@ -159,6 +165,39 @@
       }
       .animate-magic-glow {
           animation: magic-glow-effect 2.5s ease-out forwards;
+      }
+
+      /* Image Overlay Effects */
+      @keyframes pulse-vignette {
+        0%, 100% { box-shadow: inset 0 0 80px 25px rgba(239, 83, 80, 0.3); opacity: 0.8; }
+        50% { box-shadow: inset 0 0 100px 35px rgba(239, 83, 80, 0.45); opacity: 1; }
+      }
+      .vignette-strain::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        animation: pulse-vignette 2.5s ease-in-out infinite;
+        border-radius: 0.75rem; /* Match parent */
+      }
+      
+      @keyframes shimmer-distortion {
+        0% { transform: translate(0, 0); }
+        25% { transform: translate(-5px, 5px); }
+        50% { transform: translate(5px, -5px); }
+        75% { transform: translate(-5px, -5px); }
+        100% { transform: translate(0, 0); }
+      }
+      .overlay-echo::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Cfilter id="d"%3E%3CfeTurbulence baseFrequency="0.02" numOctaves="3" seed="1" type="fractalNoise"/%3E%3CfeDisplacementMap in="SourceGraphic" scale="5"/%3E%3C/filter%3E%3Crect width="100%" height="100%" filter="url(%23d)"/%3E%3C/svg%3E');
+        opacity: 0.04;
+        animation: shimmer-distortion 8s ease-in-out infinite;
+        pointer-events: none;
+        mix-blend-mode: overlay;
+        border-radius: 0.75rem; /* Match parent */
       }
     </style>
 <link rel="stylesheet" href="/index.css">

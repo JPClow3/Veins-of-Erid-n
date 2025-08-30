@@ -12,6 +12,12 @@ export type Affinity =
 export type PersonalityLean = 'Empathy' | 'Cunning' | 'Resolve' | 'Lore';
 export type VisualMark = 'Arms' | 'Chest & Back' | 'Face';
 
+export interface Weave {
+  name: string;
+  description: string;
+  affinity: Affinity;
+}
+
 export interface CharacterProfile {
   name: string;
   gender: Gender;
@@ -23,4 +29,5 @@ export interface CharacterProfile {
   visualMark: VisualMark;
   veinStrain: number; // Evolving stat tracking physical toll of magic
   echoLevel: number; // Evolving stat tracking magical signature
+  knownWeaves: Weave[]; // Learned magical techniques
 }

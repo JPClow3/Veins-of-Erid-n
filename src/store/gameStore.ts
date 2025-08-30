@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { GameState, StoryTurn, CreationStep, Journal, World, FactionReputation, DramatisPersonae, Choice as ChoiceType, GeminiSceneResponse, Item, CharacterStatsUpdate } from '../types/game';
-import type { CharacterProfile, Gender, Background, Affinity, PersonalityLean, VisualMark } from '../types/character';
+import type { GameState, StoryTurn, CreationStep, Journal, World, FactionReputation, DramatisPersonae, Choice as ChoiceType, GeminiSceneResponse, Item, WorldEvent, AethericState, GameUpdateEvent, Feat, Sanctum } from '../types/game';
+import type { CharacterProfile, Gender, Background, Affinity, PersonalityLean, VisualMark, Weave } from '../types/character';
 import type { Toast } from '../types/ui';
 import { getNextSceneStreamed, generateImage, getCreationNarrative, getMemorySnippet } from '../features/game/gameService';
 import logger from '../utils/logger';
@@ -42,6 +42,7 @@ const getInitialState = () => ({
   loadingMessage: LOADING_MESSAGES[0],
   journal: {},
   world: {},
+  worldTimeline: [],
   dramatisPersonae: {},
   reputation: initialReputation(),
   inventory: [],
@@ -50,6 +51,7 @@ const getInitialState = () => ({
     nations: [],
     factions: [],
   } as Knowledge,
+  aethericState: null,
   act: 1,
   playerCharacter: null,
   creationStep: 'INITIAL' as CreationStep | 'INITIAL' | 'COMPLETE' | 'PROLOGUE',
@@ -68,6 +70,9 @@ const getInitialState = () => ({
   loadingMessageIntervalId: null,
   magicEffectTimeoutId: null,
   actionsSinceLastSaveToast: 0,
+  feats: [],
+  sanctum: null,
+  playerNotes: '',
 });
 
 
@@ -81,17 +86,23 @@ interface GameStoreState {
   loadingMessage: string;
   journal: Journal;
   world: World;
+  worldTimeline: WorldEvent[];
   dramatisPersonae: DramatisPersonae;
   reputation: FactionReputation;
   inventory: Item[];
   knowledge: Knowledge;
+  aethericState: AethericState | null;
   act: number;
   playerCharacter: CharacterProfile | null;
   
   creationStep: CreationStep | 'INITIAL' | 'COMPLETE' | 'PROLOGUE';
-  partialCharacter: Partial<Omit<CharacterProfile, 'dormantAffinity' | 'personality' | 'veinStrain' | 'echoLevel'>>;
+  partialCharacter: Partial<Omit<CharacterProfile, 'dormantAffinity' | 'personality' | 'veinStrain' | 'echoLevel' | 'knownWeaves'>>;
   prologueIndex: number;
   lastAction: string | null;
+
+  feats: Feat[];
+  sanctum: Sanctum | null;
+  playerNotes: string;
 
   // UI/Accessibility State
   isMuted: boolean;
@@ -111,9 +122,11 @@ interface GameStoreState {
   setGameStage: (stage: GameStage) => void;
   startPrologue: () => void;
   startCreation: () => Promise<boolean>;
-  handlePlayerAction: (action: string) => Promise<void>;
+  handlePlayerAction: (action: string, isRetry?: boolean) => Promise<void>;
   retryLastAction: () => void;
   resetGame: () => void;
+  // FIX: Added handleNewGame to the store interface to fix the error in App.tsx.
+  handleNewGame: () => void;
   toggleMute: () => void;
   toggleTheme: () => void;
   setLanguage: (lang: 'en' | 'pt') => void;
@@ -126,6 +139,7 @@ interface GameStoreState {
   setHighlightedTab: (tabName: string | null) => void;
   addCustomJournalEntry: (thread: string, entry: string) => void;
   unlockLore: (update: { type: 'faction' | 'nation' | 'affinity', key: string }) => void;
+  updatePlayerNotes: (notes: string) => void;
 }
 
 let toastId = 0;
@@ -179,8 +193,19 @@ const useGameStore = create<GameStoreState>()(
         });
         get().addToast(`Added note to '${thread}' journal thread.`, 'success');
       },
+      updatePlayerNotes: (notes: string) => {
+        set({ playerNotes: notes });
+      },
 
       // Game Logic Actions
+      handleNewGame: () => {
+        if (window.confirm('Are you sure you want to start a new game? Your current progress will be lost.')) {
+            logger.info('Starting new game. Clearing storage and reloading.');
+            get().resetGame();
+            useGameStore.persist.clearStorage();
+            window.location.reload();
+        }
+      },
       resetGame: () => {
         logger.info('Resetting game state.');
         narrationManager.stop();
@@ -202,7 +227,7 @@ const useGameStore = create<GameStoreState>()(
           currentScene: {
             description: firstTurn.description,
             choices: ["Continue..."],
-            imageUrl: null, gameOver: false, endingDescription: '', imagePrompt: '', act: 1
+            imageUrl: null, gameOver: false, endingDescription: '', imagePrompt: '', act: 1, aethericState: null,
           },
           prologueIndex: 0,
         });
@@ -218,7 +243,7 @@ const useGameStore = create<GameStoreState>()(
           const sceneData = await getCreationNarrative('GENDER', {});
           set({
             gameStage: 'creation',
-            currentScene: { ...sceneData, imageUrl: null, gameOver: false, endingDescription: '', imagePrompt: '', choices: sceneData.choices, act: 1 },
+            currentScene: { ...sceneData, imageUrl: null, gameOver: false, endingDescription: '', imagePrompt: '', choices: sceneData.choices, act: 1, aethericState: null },
             storyHistory: [{ action: 'An Awakening', description: sceneData.description }],
             gameStatus: 'idle',
           });
@@ -240,7 +265,7 @@ const useGameStore = create<GameStoreState>()(
         const lastAction = get().lastAction;
         if (lastAction) {
             logger.info('Retrying last action...', { action: lastAction });
-            get().handlePlayerAction(lastAction);
+            get().handlePlayerAction(lastAction, true);
         } else {
             logger.warn('No last action to retry.');
         }
@@ -270,11 +295,11 @@ const useGameStore = create<GameStoreState>()(
         });
       },
 
-      handlePlayerAction: async (action: string) => {
+      handlePlayerAction: async (action: string, isRetry = false) => {
         if (!action.trim() || (get().gameStatus !== 'idle' && get().gameStatus !== 'error')) return;
         narrationManager.stop();
 
-        logger.info('Handling player action...', { action });
+        logger.info('Handling player action...', { action, isRetry });
         set({ error: null, lastAction: action });
 
         const { creationStep, playerCharacter } = get();
@@ -292,7 +317,7 @@ const useGameStore = create<GameStoreState>()(
                 currentScene: {
                   description: nextTurn.description,
                   choices: [(nextIndex === PROLOGUE_TEXT.length - 1) ? "Begin" : "Continue..."],
-                  imageUrl: null, gameOver: false, endingDescription: '', imagePrompt: '', act: 1
+                  imageUrl: null, gameOver: false, endingDescription: '', imagePrompt: '', act: 1, aethericState: null
                 }
               }));
               if (get().isSpeechEnabled) {
@@ -307,7 +332,7 @@ const useGameStore = create<GameStoreState>()(
           } else if (creationStep !== 'COMPLETE' && creationStep !== 'INITIAL') {
             await handleCreationAction(action, set, get);
           } else if (playerCharacter) {
-            await handleGameplayAction(action, playerCharacter, set, get);
+            await handleGameplayAction(action, playerCharacter, set, get, isRetry);
           } else {
             throw new Error("Cannot handle action: Invalid game state.");
           }
@@ -316,20 +341,177 @@ const useGameStore = create<GameStoreState>()(
           const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
           set(state => ({
             error: `An unexpected magical interference occurred. ${errorMessage}`,
-            storyHistory: state.storyHistory.slice(0, -1), // Roll back optimistic update
+            storyHistory: isRetry ? state.storyHistory : state.storyHistory.slice(0, -1), // Don't roll back optimistic update on retry
             gameStatus: 'error'
           }));
         }
       },
     }),
     {
-      name: 'gemini-adventure-save',
+      name: 'veins-of-eridun-save',
     }
   )
 );
 
 
 // --- Helper action logic outside the store definition for clarity ---
+
+const applySceneUpdates = (
+    sceneData: Omit<GeminiSceneResponse, 'description'>,
+    character: CharacterProfile,
+    action: string
+): void => {
+    const { getState, setState } = useGameStore;
+    const get = getState;
+    const set = setState;
+
+    const stateUpdates: Partial<GameStoreState> = {};
+    const events: GameUpdateEvent[] = [];
+
+    // Handle personality update based on choice
+    const choiceMade = get().currentScene?.choices.find((c: any) => typeof c !== 'string' && c.text === action) as ChoiceType | undefined;
+    if (choiceMade?.lean && choiceMade.lean !== 'Neutral') {
+        const updatedCharacter = { ...character };
+        updatedCharacter.personality[choiceMade.lean]++;
+        stateUpdates.playerCharacter = updatedCharacter;
+    }
+
+    // Handle character stats update from function call
+    if (sceneData.characterStatsUpdate) {
+        const { veinStrainChange = 0, echoLevelChange = 0, reason } = sceneData.characterStatsUpdate;
+        const currentChar = (stateUpdates.playerCharacter || get().playerCharacter)!;
+        const updatedCharacter = {
+            ...currentChar,
+            veinStrain: Math.max(0, currentChar.veinStrain + veinStrainChange),
+            echoLevel: Math.max(0, currentChar.echoLevel + echoLevelChange),
+        };
+        stateUpdates.playerCharacter = updatedCharacter;
+        events.push({ type: 'stats', message: reason });
+    }
+
+    // Handle other function call updates
+    if (sceneData.featUnlock) {
+        const { name, description } = sceneData.featUnlock;
+        const newFeat: Feat = { name, description, timestamp: Date.now() };
+        stateUpdates.feats = [...get().feats, newFeat];
+        events.push({ type: 'feat', message: `Feat Unlocked: ${name}` });
+        get().addToast(`Feat Unlocked: ${name}`, 'success');
+        get().addUpdatedTab('Feats');
+    }
+    if (sceneData.sanctumUpdate) {
+        const currentSanctum = get().sanctum;
+        const update = sceneData.sanctumUpdate;
+        const newSanctum: Sanctum = currentSanctum 
+            ? { ...currentSanctum } 
+            : { name: 'Your Sanctum', level: 0, description: '', upgrades: [] };
+
+        if (update.name) newSanctum.name = update.name;
+        if (update.levelChange) newSanctum.level += update.levelChange;
+        if (update.description) newSanctum.description = update.description;
+        if (update.newUpgrade && !newSanctum.upgrades.includes(update.newUpgrade)) {
+            newSanctum.upgrades.push(update.newUpgrade);
+        }
+
+        stateUpdates.sanctum = newSanctum;
+        const eventMessage = update.newUpgrade 
+            ? `Sanctum upgraded: ${update.newUpgrade}` 
+            : `Sanctum updated: ${newSanctum.name}`;
+        events.push({ type: 'sanctum', message: eventMessage });
+        get().addToast(eventMessage, 'success');
+        get().addUpdatedTab('Sanctum');
+    }
+    if (sceneData.loreUnlock) {
+        get().unlockLore(sceneData.loreUnlock);
+        events.push({ type: 'lore', message: `New Lore Unlocked: ${sceneData.loreUnlock.key}` });
+    }
+    if (sceneData.actTransition) {
+        stateUpdates.act = sceneData.actTransition.newAct;
+        events.push({ type: 'act', message: `The story progresses to Act ${sceneData.actTransition.newAct}.` });
+    }
+    if (sceneData.aethericStateUpdate) {
+        stateUpdates.aethericState = sceneData.aethericStateUpdate;
+        events.push({ type: 'aether', message: `Aether Shift: ${sceneData.aethericStateUpdate.condition}` });
+    }
+    if (sceneData.weaveLearn) {
+        const currentChar = (stateUpdates.playerCharacter || get().playerCharacter)!;
+        const newWeaves = [...currentChar.knownWeaves, sceneData.weaveLearn];
+        const updatedCharacter = { ...currentChar, knownWeaves: newWeaves };
+        stateUpdates.playerCharacter = updatedCharacter;
+        get().addToast(`New Weave Learned: ${sceneData.weaveLearn.name}`, 'success');
+        get().addUpdatedTab('Character');
+    }
+    if (sceneData.worldEvent) {
+        stateUpdates.worldTimeline = [...get().worldTimeline, sceneData.worldEvent];
+        get().addUpdatedTab('World');
+        events.push({ type: 'world', message: `World Event: ${sceneData.worldEvent.summary}` });
+    }
+    if (sceneData.journalUpdate) {
+        const { thread, entry, status } = sceneData.journalUpdate;
+        const newJournal = { ...get().journal };
+        const currentThread = newJournal[thread] || { entries: [], status: 'new' };
+        currentThread.entries.push(entry);
+        currentThread.status = status;
+        newJournal[thread] = currentThread;
+        stateUpdates.journal = newJournal;
+        get().addUpdatedTab('Journal');
+        events.push({ type: 'journal', message: `Journal Updated: ${thread}` });
+    }
+    if (sceneData.locationUpdate) {
+        const { name, description, x, y } = sceneData.locationUpdate;
+        stateUpdates.world = {...get().world, [name]: { description, x, y }};
+        get().addUpdatedTab('World');
+    }
+    if (sceneData.reputationUpdate) {
+        const { faction, change, reason } = sceneData.reputationUpdate;
+        const newRep = { ...get().reputation };
+        if (newRep[faction]) {
+            newRep[faction].score += change;
+            newRep[faction].history.push(reason);
+        }
+        stateUpdates.reputation = newRep;
+        events.push({ type: 'reputation', message: `${change > 0 ? '+' : ''}${change} ${faction} Reputation` });
+        get().addUpdatedTab('Factions');
+    }
+    if (sceneData.npcUpdate) {
+        const { name, description, faction = 'Unknown', role, disposition, motivation } = sceneData.npcUpdate;
+        stateUpdates.dramatisPersonae = {...get().dramatisPersonae, [name]: { description, faction, role, disposition, motivation }};
+        events.push({ type: 'people', message: `Met ${name}` });
+        get().addUpdatedTab('People');
+    }
+    if (sceneData.itemUpdate) {
+        const { action: itemAction, itemName, description, category } = sceneData.itemUpdate;
+        if (itemAction === 'add') {
+            const newItem: Item = { name: itemName, description, category };
+            stateUpdates.inventory = [...get().inventory, newItem];
+            events.push({ type: 'item', message: `Acquired: ${itemName}` });
+            get().addUpdatedTab('Inventory');
+        } else if (itemAction === 'remove') {
+            stateUpdates.inventory = get().inventory.filter(item => item.name !== itemName);
+            events.push({ type: 'item', message: `Used: ${itemName}` });
+        }
+    }
+    
+    // Handle auto-save toast notification
+    const currentCount = get().actionsSinceLastSaveToast ?? 0;
+    const newCount = currentCount + 1;
+    if (newCount >= 5) { // Trigger every 5 actions
+        get().addToast('Progress automatically saved.', 'success');
+        stateUpdates.actionsSinceLastSaveToast = 0;
+    } else {
+        stateUpdates.actionsSinceLastSaveToast = newCount;
+    }
+
+    const currentHistory = get().storyHistory;
+    const newHistory = [...currentHistory];
+    const lastTurn = newHistory[newHistory.length - 1];
+    if (lastTurn) {
+        lastTurn.events = [...(lastTurn.events || []), ...events];
+    }
+    stateUpdates.storyHistory = newHistory;
+
+    set(stateUpdates);
+};
+
 
 async function handleCreationAction(action: string, set: Function, get: Function) {
     const { storyHistory, creationStep, partialCharacter } = get();
@@ -356,7 +538,7 @@ async function handleCreationAction(action: string, set: Function, get: Function
     set({ partialCharacter: updatedChar });
 
     if (nextStep === 'COMPLETE') {
-        const finalCharacterData = updatedChar as Omit<CharacterProfile, 'dormantAffinity' | 'personality' | 'veinStrain' | 'echoLevel'> & { initialPersonalityLean: PersonalityLean };
+        const finalCharacterData = updatedChar as Omit<CharacterProfile, 'dormantAffinity' | 'personality' | 'veinStrain' | 'echoLevel' | 'knownWeaves'> & { initialPersonalityLean: PersonalityLean };
         
         const dormantAffinity = getRandomDormantAffinity(finalCharacterData.awakenedAffinity);
         const personality: Record<PersonalityLean, number> = { Empathy: 5, Cunning: 5, Resolve: 5, Lore: 5 };
@@ -366,7 +548,9 @@ async function handleCreationAction(action: string, set: Function, get: Function
             dormantAffinity, 
             personality, 
             veinStrain: 0, 
-            echoLevel: 0 };
+            echoLevel: 0,
+            knownWeaves: [],
+        };
 
         const background = BACKGROUNDS[finalCharacterData.background];
         const homeNationMap = {
@@ -413,7 +597,7 @@ async function handleCreationAction(action: string, set: Function, get: Function
             const newHistory = [...state.storyHistory];
             newHistory[newHistory.length - 1].description = sceneData.description;
             return {
-                currentScene: { ...sceneData, imageUrl: null, gameOver: false, endingDescription: '', imagePrompt: '', choices: sceneData.choices, act: 1 },
+                currentScene: { ...sceneData, imageUrl: null, gameOver: false, endingDescription: '', imagePrompt: '', choices: sceneData.choices, act: 1, aethericState: null },
                 storyHistory: newHistory,
                 gameStatus: 'idle',
             }
@@ -426,9 +610,9 @@ async function handleCreationAction(action: string, set: Function, get: Function
     }
 }
 
-async function handleGameplayAction(action: string, character: CharacterProfile, set: Function, get: Function) {
+async function handleGameplayAction(action: string, character: CharacterProfile, set: Function, get: Function, isRetry = false) {
     // --- 1. Setup and Optimistic Update ---
-    const { storyHistory, journal, act, reputation, dramatisPersonae, addToast, addUpdatedTab } = get();
+    const { storyHistory, journal, act, reputation, dramatisPersonae } = get();
 
     const intervalId = window.setInterval(() => {
         set({ loadingMessage: LOADING_MESSAGES[Math.floor(Math.random() * LOADING_MESSAGES.length)] });
@@ -437,14 +621,14 @@ async function handleGameplayAction(action: string, character: CharacterProfile,
     set({ 
         gameStatus: 'streamingNarrative', 
         loadingMessageIntervalId: intervalId,
-        storyHistory: [...storyHistory, { action, description: '' }],
+        storyHistory: isRetry ? storyHistory : [...storyHistory, { action, description: '' }],
         currentScene: { ...get().currentScene, choices: [] }
     });
 
     try {
         // --- 2. Stream Narrative ---
         const historyForPrompt = storyHistory.map((turn: StoryTurn) => `> ${turn.action}\n${turn.description}`).join('\n\n');
-        const stream = getNextSceneStreamed(character, historyForPrompt, action, journal, act, reputation, dramatisPersonae);
+        const stream = getNextSceneStreamed(character, historyForPrompt, action, journal, act, reputation, dramatisPersonae, isRetry);
         let finalDescription = '';
         let sceneData: Omit<GeminiSceneResponse, 'description'>;
 
@@ -464,8 +648,7 @@ async function handleGameplayAction(action: string, character: CharacterProfile,
             });
         }
         
-        clearInterval(get().loadingMessageIntervalId);
-        set({ gameStatus: 'processingUpdates', loadingMessageIntervalId: null });
+        set({ gameStatus: 'processingUpdates' });
 
         if (get().isSpeechEnabled) {
             set({ isSpeechLoading: true });
@@ -476,98 +659,21 @@ async function handleGameplayAction(action: string, character: CharacterProfile,
         if (!sceneData) throw new Error("Scene data was not received from the model stream.");
 
         // --- 3. Process Updates and Apply State Transactionally ---
-        const stateUpdates: Partial<GameStoreState> = {};
+        applySceneUpdates(sceneData, get().playerCharacter!, action);
         
-        // Handle personality update
-        const choiceMade = get().currentScene?.choices.find((c: any) => typeof c !== 'string' && c.text === action) as ChoiceType | undefined;
-        if (choiceMade?.lean && choiceMade.lean !== 'Neutral') {
-            const updatedCharacter = { ...character };
-            updatedCharacter.personality[choiceMade.lean]++;
-            stateUpdates.playerCharacter = updatedCharacter;
-        }
-
-        if (sceneData.characterStatsUpdate) {
-            const { veinStrainChange = 0, echoLevelChange = 0, reason } = sceneData.characterStatsUpdate;
-            const currentChar = (stateUpdates.playerCharacter || get().playerCharacter)!;
-            const updatedCharacter = {
-                ...currentChar,
-                veinStrain: Math.max(0, currentChar.veinStrain + veinStrainChange),
-                echoLevel: Math.max(0, currentChar.echoLevel + echoLevelChange),
-            };
-            stateUpdates.playerCharacter = updatedCharacter;
-            addToast(reason, 'info');
-        }
-
-        // Handle function call updates
-        if (sceneData.loreUnlock) get().unlockLore(sceneData.loreUnlock);
-        if (sceneData.actTransition) stateUpdates.act = sceneData.actTransition.newAct;
-        if (sceneData.journalUpdate) {
-            const { thread, entry, status } = sceneData.journalUpdate;
-            const newJournal = { ...get().journal };
-            const currentThread = newJournal[thread] || { entries: [], status: 'new' };
-            currentThread.entries.push(entry);
-            currentThread.status = status;
-            newJournal[thread] = currentThread;
-            stateUpdates.journal = newJournal;
-            addUpdatedTab('Journal');
-        }
-        if (sceneData.locationUpdate) {
-            const { name, description, x, y } = sceneData.locationUpdate;
-            stateUpdates.world = {...get().world, [name]: { description, x, y }};
-            addUpdatedTab('World');
-        }
-        if (sceneData.reputationUpdate) {
-            const { faction, change, reason } = sceneData.reputationUpdate;
-            const newRep = { ...get().reputation };
-            if (newRep[faction]) {
-                newRep[faction].score += change;
-                newRep[faction].history.push(reason);
+        set((state: GameStoreState) => ({
+            currentScene: {
+                ...state.currentScene,
+                ...sceneData,
+                description: finalDescription,
+                imageUrl: state.currentScene?.imageUrl ?? '',
+                act: get().act,
+                aethericState: get().aethericState,
             }
-            stateUpdates.reputation = newRep;
-            addToast(`${change > 0 ? '+' : ''}${change} ${faction} Reputation`);
-            addUpdatedTab('Factions');
-        }
-        if (sceneData.npcUpdate) {
-            const { name, description, faction = 'Unknown', role, disposition, motivation } = sceneData.npcUpdate;
-            stateUpdates.dramatisPersonae = {...get().dramatisPersonae, [name]: { description, faction, role, disposition, motivation }};
-            addUpdatedTab('People');
-        }
-        if (sceneData.itemUpdate) {
-            const { action: itemAction, itemName, description, category } = sceneData.itemUpdate;
-            if (itemAction === 'add') {
-                const newItem: Item = { name: itemName, description, category };
-                stateUpdates.inventory = [...get().inventory, newItem];
-                addToast(`Item Acquired: ${itemName}`);
-                addUpdatedTab('Inventory');
-            } else if (itemAction === 'remove') {
-                stateUpdates.inventory = get().inventory.filter(item => item.name !== itemName);
-                addToast(`Item Used: ${itemName}`);
-            }
-        }
-        
-        // Handle auto-save toast notification
-        const currentCount = get().actionsSinceLastSaveToast ?? 0;
-        const newCount = currentCount + 1;
-        if (newCount >= 5) { // Trigger every 5 actions
-            get().addToast('Progress automatically saved.', 'success');
-            stateUpdates.actionsSinceLastSaveToast = 0;
-        } else {
-            stateUpdates.actionsSinceLastSaveToast = newCount;
-        }
+        }));
 
-        // --- 4. Atomic State Update ---
-        set({ 
-            ...stateUpdates,
-            currentScene: { 
-                ...get().currentScene, 
-                ...sceneData, 
-                description: finalDescription, 
-                imageUrl: get().currentScene?.imageUrl ?? '', 
-                act: stateUpdates.act ?? get().act 
-            }
-        });
 
-        // --- 5. Handle Effects ---
+        // --- 4. Handle Effects ---
         if (sceneData.soundEffect) audioManager.playSoundEffect(sceneData.soundEffect);
         if (sceneData.ambientTrack) audioManager.setAmbientTrack(sceneData.ambientTrack);
         if (sceneData.magicEffect) {
@@ -576,7 +682,7 @@ async function handleGameplayAction(action: string, character: CharacterProfile,
             set({ magicIsHappening: true, magicEffectTimeoutId: timeoutId });
         }
 
-        // --- 6. Generate Image ---
+        // --- 5. Generate Image ---
         if (!sceneData.gameOver) {
             set({ gameStatus: 'generatingImage' });
             const imageBase64 = await generateImage(sceneData.imagePrompt);
@@ -586,12 +692,15 @@ async function handleGameplayAction(action: string, character: CharacterProfile,
             }));
         }
 
-        // --- 7. Finalize ---
+        // --- 6. Finalize ---
         set({ gameStatus: 'idle' });
 
-    } catch (err) {
-        if (get().loadingMessageIntervalId) clearInterval(get().loadingMessageIntervalId);
-        throw err; // Re-throw to be caught by the outer handler
+    } finally {
+        // This ensures the interval is cleared whether the action succeeds or fails.
+        if (get().loadingMessageIntervalId) {
+            clearInterval(get().loadingMessageIntervalId);
+            set({ loadingMessageIntervalId: null });
+        }
     }
 }
 

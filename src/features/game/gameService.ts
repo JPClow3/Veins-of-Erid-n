@@ -1,8 +1,8 @@
 import { Type, FunctionCall } from "@google/genai";
 import { systemInstruction } from '../../lore/systemInstruction';
 import logger from '../../utils/logger';
-import type { CharacterProfile } from "../../types/character";
-import type { GeminiSceneResponse, CreationStep, GeminiCreationResponse, Journal, FactionReputation, DramatisPersonae, ItemUpdate, NpcProfile, ReputationUpdate, JournalUpdate, LocationUpdate, CharacterStatsUpdate } from "../../types/game";
+import type { CharacterProfile, Weave } from "../../types/character";
+import type { GeminiSceneResponse, CreationStep, GeminiCreationResponse, Journal, FactionReputation, DramatisPersonae, ItemUpdate, NpcProfile, ReputationUpdate, JournalUpdate, LocationUpdate, CharacterStatsUpdate, WorldEvent, AethericState, FeatUnlock, SanctumUpdate } from "../../types/game";
 import { AFFINITIES, GENDERS, BACKGROUNDS, PERSONALITY_LEANS, VISUAL_MARKS, STORY_MODEL, IMAGE_MODEL, TTS_MODEL } from "../../constants/gameConstants";
 import { getRandomAffinities } from "../character/characterUtils";
 import { ai } from "../../utils/geminiClient";
@@ -43,7 +43,7 @@ const gameplayTools = {
                             },
                             required: ["text", "lean"]
                         },
-                        description: "4 distinct, interesting, action-oriented choices. Each choice must have a 'lean' property."
+                        description: "Provide 3-5 distinct, interesting, action-oriented choices. In moments of high tension or urgency, you may offer as few as 2 choices to heighten the drama. Each choice must have a 'lean' property."
                     },
                     gameOver: { type: Type.BOOLEAN, description: "Set to true only if the story reaches a definitive conclusion." },
                     endingDescription: { type: Type.STRING, description: "If gameOver is true, a concluding paragraph. Otherwise, an empty string." },
@@ -64,6 +64,18 @@ const gameplayTools = {
                     status: { type: Type.STRING, description: "The status of the thread: 'new', 'updated', or 'completed'." },
                 },
                 required: ["thread", "entry", "status"]
+            }
+        },
+        {
+            name: 'logWorldEvent',
+            description: "Logs a major, publicly known event that has occurred due to the player's actions. This adds to the world's timeline.",
+            parameters: {
+                type: Type.OBJECT,
+                properties: {
+                    summary: { type: Type.STRING, description: "A brief, objective summary of the event for a historical log." },
+                    act: { type: Type.INTEGER, description: "The act in which the event occurred." },
+                },
+                required: ["summary", "act"]
             }
         },
         {
@@ -203,6 +215,56 @@ const gameplayTools = {
                 required: ["type", "key"]
             }
         },
+        {
+            name: 'setAethericState',
+            description: "Sets the ambient magical conditions for the current location or time.",
+            parameters: {
+                type: Type.OBJECT,
+                properties: {
+                    condition: { type: Type.STRING, description: "The name of the state (e.g., 'Concordant: Emberflow', 'Dissonant', 'Tide: Thunderstorm')." },
+                    description: { type: Type.STRING, description: "A brief, in-world description of the effect." }
+                },
+                required: ["condition", "description"]
+            }
+        },
+        {
+            name: 'learnWeave',
+            description: "The player character learns a new, named magical technique.",
+            parameters: {
+                type: Type.OBJECT,
+                properties: {
+                    name: { type: Type.STRING, description: "The name of the weave (e.g., 'Veil of Silence')." },
+                    description: { type: Type.STRING, description: "A brief description of what the weave does." },
+                    affinity: { type: Type.STRING, description: "The Flow Affinity this weave belongs to (e.g., 'Shadeflow')." }
+                },
+                required: ["name", "description", "affinity"]
+            }
+        },
+        {
+            name: 'unlockFeat',
+            description: "Unlocks a feat or achievement for the player after they accomplish a significant goal.",
+            parameters: {
+                type: Type.OBJECT,
+                properties: {
+                    name: { type: Type.STRING, description: "The name of the feat (e.g., 'Escape from Ardelane', 'A Friend in Need')." },
+                    description: { type: Type.STRING, description: "A brief description of how the feat was earned." },
+                },
+                required: ["name", "description"]
+            }
+        },
+        {
+            name: 'updateSanctum',
+            description: "Updates the player's personal sanctum, such as establishing it, leveling it up, or adding a new feature.",
+            parameters: {
+                type: Type.OBJECT,
+                properties: {
+                    name: { type: Type.STRING, description: "The name of the sanctum. Only provide on first establishment." },
+                    levelChange: { type: Type.INTEGER, description: "The amount to change the level by (e.g., +1)." },
+                    description: { type: Type.STRING, description: "The new or updated description of the sanctum." },
+                    newUpgrade: { type: Type.STRING, description: "A new upgrade or feature added to the sanctum (e.g., 'A small alchemy bench', 'A hidden escape route')." },
+                },
+            }
+        },
     ]
 };
 
@@ -255,6 +317,11 @@ export async function getCreationNarrative(step: CreationStep, characterSoFar: P
     const responseText = response.text;
     try {
         const parsed = JSON.parse(responseText.trim()) as GeminiCreationResponse;
+        
+        if (parsed.choices.length !== choices.length) {
+            logger.warn('AI generated an incorrect number of choices during creation.', { expected: choices.length, got: parsed.choices.length, aiChoices: parsed.choices });
+        }
+        
         // Override AI-generated choices with the canonical ones to ensure game logic consistency.
         parsed.choices = choices; 
         return parsed;
@@ -290,7 +357,13 @@ export async function* getNextSceneStreamed(
     act: number, 
     reputation: FactionReputation, 
     dramatisPersonae: DramatisPersonae,
+    isRetry = false
 ): AsyncGenerator<string, Omit<GeminiSceneResponse, 'description'>, void> {
+    
+    const playerActionForPrompt = isRetry 
+      ? `There was an error in your last response. Please regenerate the scene again, starting from my previous action: "${playerAction}"`
+      : playerAction;
+      
     const prompt = `
     **PLAYER CHARACTER PROFILE:**
     - Name: ${character.name}
@@ -302,6 +375,7 @@ export async function* getNextSceneStreamed(
     - Visual Mark: Mark on ${character.visualMark}
     - Vein-Strain: ${character.veinStrain}/100
     - Echo Level: ${character.echoLevel}/100
+    - Known Weaves: ${JSON.stringify(character.knownWeaves)}
 
     **CURRENT NARRATIVE ACT:**
     Act ${act}. Your narrative focus MUST align with the goals of this act as defined in your system instructions.
@@ -315,7 +389,7 @@ export async function* getNextSceneStreamed(
     ${history || "The story is just beginning."}
     
     **PLAYER's ACTION:**
-    ${playerAction}
+    ${playerActionForPrompt}
     
     **YOUR TASK:**
     Generate the next part of the story. You must follow all instructions precisely.
@@ -324,7 +398,7 @@ export async function* getNextSceneStreamed(
     3. You MUST end by calling the \`presentScene\` function.
     `;
 
-    logger.info('Calling generateContentStream with function calling', { model: STORY_MODEL });
+    logger.info('Calling generateContentStream with function calling', { model: STORY_MODEL, isRetry });
     
     const responseStream = await ai.models.generateContentStream({
         model: STORY_MODEL,
@@ -362,6 +436,9 @@ export async function* getNextSceneStreamed(
                 case 'updateJournal':
                     sceneData.journalUpdate = (call.args as unknown) as JournalUpdate;
                     break;
+                case 'logWorldEvent':
+                    sceneData.worldEvent = (call.args as unknown) as WorldEvent;
+                    break;
                 case 'updateLocation':
                     sceneData.locationUpdate = (call.args as unknown) as LocationUpdate;
                     break;
@@ -391,6 +468,18 @@ export async function* getNextSceneStreamed(
                     break;
                 case 'unlockLore':
                     sceneData.loreUnlock = (call.args as unknown) as { type: 'faction' | 'nation' | 'affinity'; key: string; };
+                    break;
+                case 'setAethericState':
+                    sceneData.aethericStateUpdate = (call.args as unknown) as AethericState;
+                    break;
+                case 'learnWeave':
+                    sceneData.weaveLearn = (call.args as unknown) as Weave;
+                    break;
+                case 'unlockFeat':
+                    sceneData.featUnlock = (call.args as unknown) as FeatUnlock;
+                    break;
+                case 'updateSanctum':
+                    sceneData.sanctumUpdate = (call.args as unknown) as SanctumUpdate;
                     break;
                 default:
                     logger.warn(`Unknown function call received from model: ${call.name}`);

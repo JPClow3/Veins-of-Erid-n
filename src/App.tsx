@@ -19,9 +19,27 @@ import ToastNotifications from './components/common/ToastNotifications';
 import CodexSidebar from './components/common/CodexSidebar';
 import { blobManager } from './utils/blobManager';
 import LorePanel from './components/game/LorePanel';
+import AethericStateDisplay from './components/game/AethericStateDisplay';
+import FeatsPanel from './components/game/FeatsPanel';
+import SanctumPanel from './components/game/SanctumPanel';
+import PlayerNotesPanel from './components/game/PlayerNotesPanel';
+
+const useHasHydrated = () => {
+  const [hydrated, setHydrated] = useState(useGameStore.persist.hasHydrated());
+
+  useEffect(() => {
+    const unsubFinishHydration = useGameStore.persist.onFinishHydration(() => setHydrated(true));
+    return () => {
+      unsubFinishHydration();
+    };
+  }, []);
+
+  return hydrated;
+};
 
 
 const App: React.FC = () => {
+  const hasHydrated = useHasHydrated();
   const {
     gameStage,
     currentScene, 
@@ -32,10 +50,15 @@ const App: React.FC = () => {
     loadingMessage,
     journal,
     world,
+    worldTimeline,
     dramatisPersonae,
     reputation,
     inventory,
     playerCharacter,
+    aethericState,
+    feats,
+    sanctum,
+    playerNotes,
     handlePlayerAction,
     startPrologue,
     startCreation,
@@ -44,6 +67,8 @@ const App: React.FC = () => {
     animationsEnabled,
     theme,
     magicIsHappening,
+    handleNewGame,
+    updatePlayerNotes,
   } = useGameStore(state => ({
     gameStage: state.gameStage,
     currentScene: state.currentScene,
@@ -54,10 +79,15 @@ const App: React.FC = () => {
     loadingMessage: state.loadingMessage,
     journal: state.journal,
     world: state.world,
+    worldTimeline: state.worldTimeline,
     dramatisPersonae: state.dramatisPersonae,
     reputation: state.reputation,
     inventory: state.inventory,
     playerCharacter: state.playerCharacter,
+    aethericState: state.aethericState,
+    feats: state.feats,
+    sanctum: state.sanctum,
+    playerNotes: state.playerNotes,
     handlePlayerAction: state.handlePlayerAction,
     startPrologue: state.startPrologue,
     startCreation: state.startCreation,
@@ -66,6 +96,8 @@ const App: React.FC = () => {
     animationsEnabled: state.animationsEnabled,
     theme: state.theme,
     magicIsHappening: state.magicIsHappening,
+    handleNewGame: state.handleNewGame,
+    updatePlayerNotes: state.updatePlayerNotes,
   }));
 
   const isLoading = gameStatus !== 'idle' && gameStatus !== 'error';
@@ -78,17 +110,19 @@ const App: React.FC = () => {
 
   
   useEffect(() => {
-    // This effect ensures that if a saved game exists, we skip prologues/creation
-    // @ts-ignore
-    const hasSave = useGameStore.persist.getOptions().storage?.getItem(useGameStore.persist.getOptions().name);
-    if (hasSave && gameStage !== 'playing') {
-       if (playerCharacter) { // Check if player character is loaded
-         setGameStage('playing');
-       }
-    } else if (gameStage === 'prologue') {
+    if (!hasHydrated) {
+      return; // Wait for the store to be ready
+    }
+    
+    // If a character exists in the loaded state, jump to the 'playing' stage.
+    if (playerCharacter && gameStage !== 'playing') {
+      setGameStage('playing');
+    } 
+    // Otherwise, if we're in the default 'prologue' stage, start it.
+    else if (!playerCharacter && gameStage === 'prologue') {
       startPrologue();
     }
-  }, [gameStage, startPrologue, setGameStage, playerCharacter]);
+  }, [hasHydrated, gameStage, playerCharacter, startPrologue, setGameStage]);
 
   useEffect(() => {
     const handleUnload = () => blobManager.cleanupAll();
@@ -105,13 +139,6 @@ const App: React.FC = () => {
       }
     });
   }, [startCreation, setGameStage]);
-
-  const handlePlayAgain = useCallback(() => {
-    if (window.confirm('Are you sure you want to start a new game? All progress will be lost.')) {
-      useGameStore.persist.clearStorage();
-      window.location.reload();
-    }
-  }, []);
   
   const loadingFallback = (
     <div className="min-h-screen text-text-primary flex flex-col items-center justify-center p-4">
@@ -122,6 +149,10 @@ const App: React.FC = () => {
       </div>
     </div>
   );
+  
+  if (!hasHydrated) {
+      return loadingFallback;
+  }
 
   if (gameStage === 'prologue') {
     return (
@@ -162,6 +193,8 @@ const App: React.FC = () => {
           imageUrl={currentScene?.imageUrl} 
           isLoading={isImageLoading}
           magicIsHappening={magicIsHappening}
+          veinStrain={playerCharacter?.veinStrain ?? 0}
+          echoLevel={playerCharacter?.echoLevel ?? 0}
           className="lg:col-span-4 xl:col-span-3 h-full"
         />
 
@@ -175,75 +208,75 @@ const App: React.FC = () => {
                 </svg>
                 <span>{error}</span>
               </div>
-              <button
-                onClick={retryLastAction}
-                className="ml-auto mt-2 sm:mt-0 px-3 py-1 bg-error/40 hover:bg-error/60 text-white font-bold rounded-md transition-colors duration-200 text-sm"
-              >
-                Retry
-              </button>
+              <button onClick={retryLastAction} className="sm:ml-auto shrink-0 px-3 py-1 text-sm bg-error/20 hover:bg-error/40 rounded-md transition-colors text-error hover:text-white font-semibold">Retry</button>
             </div>
           )}
           
-          <StoryPanel storyHistory={storyHistory} isLoading={isLoading && !isImageLoading} />
-          
-          <div className="flex-shrink-0">
-            {isLoading && !isImageLoading && (
-              <div className="my-4 flex justify-center items-center gap-3">
-                <LoadingIndicator />
-                <p className="text-accent-primary animate-pulse font-heading">{isSpeechLoading ? 'Narrating the story...' : loadingMessage}</p>
-              </div>
-            )}
-             {(storyHistory.length > 0 && !(isLoading && !isImageLoading) && storyHistory[storyHistory.length - 1]?.description !== '...') && (
-               <hr className="my-4 border-t border-dashed border-border" />
-             )}
-          </div>
+          <AethericStateDisplay state={aethericState} />
 
-          <div className="mt-auto pt-4">
-            <ActionInput
-              choices={currentScene?.choices ?? []}
-              onSubmit={handlePlayerAction}
-              disabled={isLoading || isGameOver}
-              isCreatingCharacter={!playerCharacter}
-              allowCustomAction={currentScene?.allowCustomAction}
-              allowExamineAction={currentScene?.allowExamineAction}
-            />
+          <StoryPanel storyHistory={storyHistory} isLoading={isLoading} />
+          
+          <div className="flex-shrink-0 mt-auto pt-4">
+            {isLoading ? (
+              <div className="h-full min-h-[92px] flex items-center justify-center animate-fade-in gap-3 text-text-secondary font-ui italic">
+                <LoadingIndicator />
+                <span>{loadingMessage}</span>
+              </div>
+            ) : (
+              <ActionInput 
+                choices={currentScene.choices} 
+                onSubmit={handlePlayerAction} 
+                disabled={isLoading}
+                isCreatingCharacter={false}
+                playerCharacter={playerCharacter}
+                allowCustomAction={currentScene.allowCustomAction}
+                allowExamineAction={currentScene.allowExamineAction}
+              />
+            )}
           </div>
         </div>
 
-        {/* === Right Column: The Codex === */}
-        <div className="lg:col-span-4 xl:col-span-4 lg:max-h-full">
-            {playerCharacter && (
-               <CodexSidebar>
-                  <CodexSidebar.Section title="Character">
-                     <CharacterSheet character={playerCharacter} />
-                  </CodexSidebar.Section>
-                  <CodexSidebar.Section title="Journal">
-                      <JournalPanel journal={journal} />
-                  </CodexSidebar.Section>
-                   <CodexSidebar.Section title="Lore">
-                      <LorePanel />
-                  </CodexSidebar.Section>
-                  <CodexSidebar.Section title="Inventory">
-                      <InventoryPanel inventory={inventory} />
-                  </CodexSidebar.Section>
-                   <CodexSidebar.Section title="World">
-                      <WorldPanel world={world} />
-                  </CodexSidebar.Section>
-                  <CodexSidebar.Section title="People">
-                      <PeoplePanel dramatisPersonae={dramatisPersonae} />
-                  </CodexSidebar.Section>
-                   <CodexSidebar.Section title="Factions">
-                      <FactionsPanel reputation={reputation} />
-                  </CodexSidebar.Section>
-              </CodexSidebar>
-            )}
+        {/* === Right Column: Codex === */}
+        <div className="hidden lg:block lg:col-span-4 xl:col-span-4 max-h-[85vh]">
+          <CodexSidebar>
+            <CodexSidebar.Section title="Character">
+              {playerCharacter && <CharacterSheet character={playerCharacter} />}
+            </CodexSidebar.Section>
+             <CodexSidebar.Section title="Sanctum">
+              <SanctumPanel sanctum={sanctum} />
+            </CodexSidebar.Section>
+            <CodexSidebar.Section title="Journal">
+               <JournalPanel journal={journal} />
+            </CodexSidebar.Section>
+             <CodexSidebar.Section title="World">
+               <WorldPanel world={world} worldTimeline={worldTimeline} />
+            </CodexSidebar.Section>
+            <CodexSidebar.Section title="People">
+               <PeoplePanel dramatisPersonae={dramatisPersonae} />
+            </CodexSidebar.Section>
+            <CodexSidebar.Section title="Factions">
+               <FactionsPanel reputation={reputation} />
+            </CodexSidebar.Section>
+            <CodexSidebar.Section title="Feats">
+              <FeatsPanel feats={feats} />
+            </CodexSidebar.Section>
+            <CodexSidebar.Section title="Inventory">
+              <InventoryPanel inventory={inventory} />
+            </CodexSidebar.Section>
+            <CodexSidebar.Section title="Lore">
+              <LorePanel />
+            </CodexSidebar.Section>
+            <CodexSidebar.Section title="Player Notes">
+              <PlayerNotesPanel notes={playerNotes} setNotes={updatePlayerNotes} />
+            </CodexSidebar.Section>
+          </CodexSidebar>
         </div>
       </main>
-      
-      {isGameOver && currentScene && (
+
+      {isGameOver && (
         <GameOverModal
           endingDescription={currentScene.endingDescription}
-          onPlayAgain={handlePlayAgain}
+          onPlayAgain={handleNewGame}
         />
       )}
     </div>

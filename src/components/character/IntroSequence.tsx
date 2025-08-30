@@ -29,6 +29,8 @@ const IntroSequence: React.FC<IntroSequenceProps> = ({ storyHistory, isLoading, 
                   onSubmit={onAction}
                   disabled={isLoading}
                   isCreatingCharacter={true}
+                  // FIX: Added the required 'playerCharacter' prop, which is null during the intro sequence.
+                  playerCharacter={null}
                   allowCustomAction={false}
                 />
               </div>

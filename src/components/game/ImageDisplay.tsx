@@ -8,9 +8,11 @@ interface ImageDisplayProps {
   isLoading: boolean;
   className?: string;
   magicIsHappening?: boolean;
+  veinStrain?: number;
+  echoLevel?: number;
 }
 
-const ImageDisplay: React.FC<ImageDisplayProps> = ({ imageUrl, isLoading, className = '', magicIsHappening = false }) => {
+const ImageDisplay: React.FC<ImageDisplayProps> = ({ imageUrl, isLoading, className = '', magicIsHappening = false, veinStrain = 0, echoLevel = 0 }) => {
   const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(null);
   const [previousImageUrl, setPreviousImageUrl] = useState<string | null>(null);
   const [imageHasError, setImageHasError] = useState(false);
@@ -95,8 +97,11 @@ const ImageDisplay: React.FC<ImageDisplayProps> = ({ imageUrl, isLoading, classN
   const magicGlowClass = magicIsHappening ? 'animate-magic-glow' : '';
   const loadingGlowClass = isLoading && !magicIsHappening ? 'animate-pulse-glow' : '';
 
+  const strainClass = veinStrain > 70 ? 'vignette-strain' : '';
+  const echoClass = echoLevel > 70 ? 'overlay-echo' : '';
+
   return (
-    <div className={`relative bg-surface rounded-xl overflow-hidden flex items-center justify-center aspect-[4/3] ring-1 ring-border shadow-2xl shadow-glow-primary transition-shadow duration-500 ${className} ${loadingGlowClass} ${magicGlowClass}`}>
+    <div className={`relative bg-surface rounded-xl overflow-hidden flex items-center justify-center aspect-[4/3] ring-1 ring-border shadow-2xl shadow-glow-primary transition-shadow duration-500 ${className} ${loadingGlowClass} ${magicGlowClass} ${strainClass} ${echoClass}`}>
         <div className="absolute inset-0 border-t-2 border-accent-secondary opacity-50"></div>
         <div className="absolute inset-0 flex items-center justify-center text-text-secondary font-ui text-center">
             The mists of creation have yet to part.

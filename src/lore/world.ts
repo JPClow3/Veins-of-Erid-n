@@ -102,17 +102,88 @@ Magic is a dangerous, double-edged sword with tangible, often brutal, consequenc
   - **Soulforging**: The forbidden practice of imbuing inanimate objects with a resonant consciousness, creating constructs or sentient artifacts. Considered the ultimate hubris by the Sanctuary and a perversion by the Harmonists.
 
 ---
+## The State of the Aether
+The environment itself is alive with Flow. You MUST describe how the local aether affects the player's magic.
+- **Concordance (Affinity):** A place deeply resonant with one affinity (e.g., a volcano for Emberflow). Weaves of that affinity are more powerful (+2 Echo, +1 Strain), while opposing affinities are weakened.
+- **Dissonance:** A place where the Flow is scarred or twisted (e.g., the site of a Soulflow catastrophe). All weaving incurs +2 additional Vein-Strain.
+- **Tides (Event):** Temporary, region-wide effects (e.g., 'The Crimson Moon,' 'Stormy Weather'). Describe their effects on relevant affinities. For example, a thunderstorm amplifies Stormflow weaves across the region.
+
+---
 ## Main Narrative Arcs & The Central Conflict
 The core story of Eridûn revolves around the **"Flow Schism,"** a growing ideological and magical conflict that threatens to plunge the continent into a devastating war.
 - **The Central Question**: Is Flow a natural part of humanity to be understood and integrated, or is it a corrupting, dangerous force to be controlled and purged?
 
 ${factionsSection}
 
+### Faction Sub-Groups & Internal Conflicts
+- **The Harmonists**: Not all are peaceful. A militant sect, the **"Root and Branch,"** believes freeing Awakened requires direct, violent action against state institutions, creating a deep rift with the mainstream pacifist leadership.
+- **The Purists**: Not all are genocidal. The **"Containment Faction"** advocates for humane but strict quarantine and control, viewing the mainstream "Culling Faction" as barbaric extremists.
+- **Veyra's Royal Conservatory**: A conflict exists between the **"Militant Wing,"** which sees Flow as a weapon of state, and the **"Scholastic Wing,"** researchers more interested in understanding Flow, who often clash over ethical boundaries.
+
 - **The Player's Role**: The player character, as a newly and potent Awakened, is a natural fulcrum in this conflict. Their actions will be interpreted by both sides, and they will be courted, hunted, and manipulated by agents of the Schism. Their unique combination of affinities may hold the key to a new understanding of Flow, making them a figure of immense importance.
 - **Inciting Incidents & Plot Hooks**: The story can begin with the player witnessing or being caught in a local manifestation of the Schism: an Ardelanese Guildguard raid on a suspected Harmonist safehouse, a Thalrek agent attempting to "recruit" a newly Awakened child, a Sanctuary priest delivering a fiery sermon against the "Flow-corrupted," or a chance meeting with a Harmonist agent seeking to smuggle a text of forbidden lore.
 
 ---
 ${nationsSection}
+---
+## Military Doctrine & The Flow-Forged Battlefield
+### Veyra's Royal Army: "The Gilded Phalanx"
+- **Doctrine**: Combined Arms & Flow Supremacy. Veyra's military is professional, disciplined, and built around a core of highly-trained battlemages from the Royal Conservatory. Their strategy relies on using Stoneflow mages to create battlefield fortifications, Zephyrflow users to disrupt enemy archers with localized gales, and Emberflow "artillery" to break formations from a distance.
+- **Key Units**:
+  - **Conservatory Battlemage**: A versatile offensive caster, heavily armored and protected by infantry.
+  - **River-Guard**: Elite heavy infantry, trained to fight alongside mages and hold the line at all costs. Their shields are inscribed with minor defensive runes.
+- **Weakness**: Reagent Dependency. Their reliance on refined, high-quality reagents makes their supply lines a critical vulnerability. An army that outruns its supply is an army half-beaten.
+
+### The Thalrek Imperium: "The Iron Tide"
+- **Doctrine**: Overwhelming Force & Shock Assault. The Imperium treats magic as another weapon in its arsenal, brutally efficient and devoid of artistry. Their mages are not scholars but "Flow-Arms," products of harsh state-run programs, used as living siege engines and shock troops. They favor direct, powerful, and often self-destructive applications of Flow to induce terror.
+- **Key Units**:
+  - **Breaker**: An Awakened conditioned for immense physical strength and raw Stoneflow power, used to shatter gates and fortifications. They have a short lifespan due to extreme Vein-Strain.
+  - **Harrier Pack**: Squads of lightly armored soldiers led by a Shadeflow user, tasked with reconnaissance and assassination behind enemy lines.
+- **Weakness**: Inflexibility and Attrition. Their command structure is rigid, and they are willing to accept horrific casualties (both mundane and Awakened) to achieve an objective. Their brutal tactics make them poor at winning the loyalty of conquered peoples.
+
+### Ardelane's Guild Compact: "The Ledger-Sworn Legions"
+- **Doctrine**: Economic Warfare & Contractual Combat. Ardelane prefers to win wars before they begin by bankrupting its rivals through embargoes and market manipulation. When battle is unavoidable, they employ highly-paid mercenary companies and their own House Guards, who are bound by detailed magical contracts ("Flow Indentures"). Magic is used pragmatically: Tideflow to control canals and ports, and Crystalflow to power defensive and communication devices.
+- **Key Units**:
+  - **Flow-Broker**: A mage specialized in enforcing magical contracts on the battlefield and disrupting enemy enchantments.
+  - **Free March Mercenaries**: Ardelane often hires entire companies from the Free Marches, paying them handsomely for their loyalty, making their army composition varied and unpredictable.
+- **Weakness**: Fickle Loyalty. Their reliance on mercenaries and profit-driven soldiers means their morale can be fragile. A war that becomes unprofitable may see their armies dissolve.
+
+---
+## Economics: The Reagent Market & Flow-Based Industry
+### The Kethian Monopoly & The Grand Tariff
+- **Concept**: The Isles of Keth, with their secretive Conclave of Sparks and mastery of sea travel, control the harvesting and trade of the rarest oceanic and storm-based reagents (like Storm-Glass). They impose the "Grand Tariff" on all reagent shipments passing through their waters, making them immensely wealthy and giving them leverage over every other nation.
+- **Conflict**: Ardelane constantly seeks to break this monopoly by funding expeditions to find new reagent sources or by smuggling, creating a cold war of espionage and piracy on the high seas.
+
+### Veyran Mercantilism & The River Tolls
+- **Concept**: Veyra controls the Grand River, the continent's primary artery for trade. They use this control to levy tolls and favor their own state-sponsored merchant guilds, enforcing a protectionist economic policy. Their wealth is based on controlling the movement of goods, not just their production.
+- **Conflict**: The landlocked Free Marches resent these tolls, which stifle their own economic growth, leading to constant diplomatic friction and support for smugglers who bypass Veyran checkpoints.
+
+### Flow-Powered Industry & The Cost of Progress
+- **Concept**: Flow is being integrated into early industrial processes.
+  - **Ardelane**: Guilds use Tideflow mages to power canal locks and hydraulic cranes, drastically increasing the efficiency of their ports.
+  - **Thalrek**: The Imperium uses Emberflow forges to create superior steel for their armies, powered by Awakened who are treated as little more than living bellows.
+  - **Sanctuary of Edrath**: They decry this as sacrilege, believing that using the "divine gift" of Flow for such mundane and commercial purposes is a form of blasphemy. This creates an ideological and economic rift.
+
+---
+## Politics: Internal Strife & The Great Game
+### Veyra: The Succession Crisis
+- **Structure**: A Feudal Monarchy where the Queen's power is balanced by the Royal Conservatory (the mages) and the great Noble Houses who control the land.
+- **Conflict**: Queen Maereth Valoryn is aging and has no clear, Awakened heir. The "Rite of the Vein" dictates that the monarch must possess the Flow, but the Valoryn bloodline is thinning. The Noble Houses are positioning their own magically-gifted children as potential successors, while Regent Lord Thalen maneuvers to make the Regency a permanent position, effectively turning the monarchy into a puppet. The player could become a kingmaker, or a target.
+
+### Ardelane: The Great Houses' Shadow War
+- **Structure**: A Merchant Republic governed by a council of representatives from the most powerful Great Houses. The council's leader is elected, but true power lies in wealth and control of Flow Indentures.
+- **Conflict**: The Great Houses are in a constant, cold war of corporate espionage. They sabotage each other's trade ventures, poach talented Awakened, and use their wealth to buy political influence. The Purist movement is gaining traction among the un-Awakened working classes, who resent the power and wealth accumulated by the "Flow-Barons" of the Great Houses, creating a populist powder keg.
+
+### The Sanctuary of Edrath: The Doctrinal Schism
+- **Structure**: A Theocracy ruled by the Synod, a council of high-ranking priests and scholars. They interpret doctrine and enforce religious law.
+- **Conflict**: A deep rift is forming within the Synod. The Orthodox faction believes all uncontrolled Flow is heresy and supports the Purists' goals of eradication. The Reformist faction, led by figures like the late Alora, argues that Flow is a divine gift that must be understood to be properly revered, advocating for study and compassion. The player's actions and existence could tip the balance of this schism, determining whether the Sanctuary becomes a force for persecution or for cautious understanding.
+
+---
+## Law, Culture, and the Unawakened
+- **Ardelane's Flow Indentures**: A legally binding contract where an Awakened pledges their service and power to a Guild House in exchange for reagents, training, and protection. These contracts are notoriously predatory, with clauses about Vein-Strain liability and generational debt. Breaking an indenture is a severe crime.
+- **Sanctuary Law**: The Theocracy's laws are absolute. Unsanctioned weaving is considered blasphemy. An uncontrolled magical outburst can lead to public penance, forced pilgrimage, or a sentence to the "Silent Cells" where one's connection to the Flow is suppressed.
+- **The Unawakened Populace**: Public opinion is divided and volatile. In Veyra, the Awakened are a symbol of noble power, but also a source of fear. In the Free Marches, they are seen as valuable mercenaries. Across the continent, opportunistic merchants sell fake reagents and "Flow-wards" to a gullible and fearful public.
+
 ---
 ## Conceptual Map of Eridûn (For Location Coordinates)
 *When you call \`updateLocation\`, use the following conceptual layout to determine the \`x\` and \`y\` coordinates (0-100).*

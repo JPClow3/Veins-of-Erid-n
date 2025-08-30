@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import type { World } from '../../types/game';
+import type { World, WorldEvent } from '../../types/game';
 
 interface WorldPanelProps {
   world: World;
+  worldTimeline: WorldEvent[];
 }
 
 const MapBackground = () => (
@@ -18,13 +19,13 @@ const MapBackground = () => (
 );
 
 
-const WorldPanel: React.FC<WorldPanelProps> = ({ world }) => {
+const WorldPanel: React.FC<WorldPanelProps> = ({ world, worldTimeline }) => {
   const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
   const locations = Object.entries(world);
   
   const currentSelection = selectedLocation ? world[selectedLocation] : null;
 
-  if (locations.length === 0) {
+  if (locations.length === 0 && worldTimeline.length === 0) {
     return (
       <div id="tabpanel-world" role="tabpanel" aria-labelledby="tab-world" className="text-center p-6 text-text-secondary font-ui italic bg-surface-muted/30 rounded-lg ring-1 ring-border">
         <p>You have not yet explored the wider world. A blank map awaits.</p>
@@ -34,45 +35,64 @@ const WorldPanel: React.FC<WorldPanelProps> = ({ world }) => {
 
   return (
     <div id="tabpanel-world" role="tabpanel" aria-labelledby="tab-world" className="space-y-4">
-      <div className="relative aspect-video bg-surface rounded-lg overflow-hidden ring-1 ring-border shadow-inner-glow">
-        <MapBackground />
-        <div className="absolute inset-0">
-          {locations.map(([name, data]) => (
-            <div
-              key={name}
-              className="absolute transform -translate-x-1/2 -translate-y-1/2"
-              style={{ left: `${data.x}%`, top: `${data.y}%` }}
-            >
-              <button
-                onClick={() => setSelectedLocation(name)}
-                aria-label={`Select location: ${name}`}
-                className={`relative group w-4 h-4 rounded-full transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-surface focus:ring-accent-primary
-                  ${selectedLocation === name ? 'bg-accent-secondary ring-2 ring-accent-secondary/50 scale-125' : 'bg-accent-primary/70 hover:bg-accent-primary'}`}
-              >
-                 <div className="absolute inset-0 rounded-full animate-ping-slow bg-accent-primary opacity-50"></div>
-                 <div className="absolute inset-0 rounded-full bg-accent-primary opacity-80"></div>
+      {locations.length > 0 && (
+         <div className="relative aspect-video bg-surface rounded-lg overflow-hidden ring-1 ring-border shadow-inner-glow">
+            <MapBackground />
+            <div className="absolute inset-0">
+            {locations.map(([name, data]) => (
+                <div
+                key={name}
+                className="absolute transform -translate-x-1/2 -translate-y-1/2"
+                style={{ left: `${data.x}%`, top: `${data.y}%` }}
+                >
+                <button
+                    onClick={() => setSelectedLocation(name)}
+                    aria-label={`Select location: ${name}`}
+                    className={`relative group w-4 h-4 rounded-full transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-surface focus:ring-accent-primary
+                    ${selectedLocation === name ? 'bg-accent-secondary ring-2 ring-accent-secondary/50 scale-125' : 'bg-accent-primary/70 hover:bg-accent-primary'}`}
+                >
+                    <div className="absolute inset-0 rounded-full animate-ping-slow bg-accent-primary opacity-50"></div>
+                    <div className="absolute inset-0 rounded-full bg-accent-primary opacity-80"></div>
 
-                 <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-max bg-surface text-text-primary text-xs font-bold font-heading rounded-md py-1 px-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none shadow-lg ring-1 ring-border z-10">
-                    {name}
+                    <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-max bg-surface text-text-primary text-xs font-bold font-heading rounded-md py-1 px-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none shadow-lg ring-1 ring-border z-10">
+                        {name}
+                    </div>
+                </button>
                 </div>
-              </button>
+            ))}
             </div>
-          ))}
         </div>
-      </div>
+      )}
+      
+      {locations.length > 0 && (
+        <div className="p-4 bg-surface-muted/30 rounded-lg ring-1 ring-border min-h-[100px] animate-fade-in">
+            {currentSelection ? (
+                <div>
+                    <h4 className="font-bold text-lg font-heading text-accent-primary">{selectedLocation}</h4>
+                    <p className="text-text-primary font-body text-base leading-relaxed">{currentSelection.description}</p>
+                </div>
+            ) : (
+                <div className="h-full flex items-center justify-center">
+                    <p className="text-text-secondary font-ui italic">Select a location on the map to view details.</p>
+                </div>
+            )}
+        </div>
+      )}
 
-      <div className="p-4 bg-surface-muted/30 rounded-lg ring-1 ring-border min-h-[100px] animate-fade-in">
-        {currentSelection ? (
-            <div>
-                <h4 className="font-bold text-lg font-heading text-accent-primary">{selectedLocation}</h4>
-                <p className="text-text-primary font-body text-base leading-relaxed">{currentSelection.description}</p>
-            </div>
-        ) : (
-            <div className="h-full flex items-center justify-center">
-                <p className="text-text-secondary font-ui italic">Select a location on the map to view details.</p>
-            </div>
-        )}
-      </div>
+      {worldTimeline.length > 0 && (
+         <div className="p-4 bg-surface-muted/30 rounded-lg ring-1 ring-border animate-fade-in">
+             <h4 className="font-bold text-lg font-heading text-accent-primary mb-2">World Timeline</h4>
+                <ul className="space-y-2 text-text-primary font-body text-sm">
+                    {worldTimeline.map((event, index) => (
+                        <li key={index} className="border-l-2 border-border-accent pl-3">
+                            <strong className="text-accent-secondary">Act {event.act}:</strong>
+                            <p className="text-text-secondary italic">{event.summary}</p>
+                        </li>
+                    ))}
+                </ul>
+        </div>
+      )}
+
 
        <style>{`
         @keyframes ping-slow {

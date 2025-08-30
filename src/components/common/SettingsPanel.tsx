@@ -48,6 +48,7 @@ const SettingsPanel = () => {
         toggleAnimations,
         isSpeechEnabled,
         toggleSpeech,
+        handleNewGame,
     // Fix: Removed unused and non-existent 'isLoading' property.
     } = useGameStore(state => ({
         isMuted: state.isMuted,
@@ -60,6 +61,8 @@ const SettingsPanel = () => {
         toggleAnimations: state.toggleAnimations,
         isSpeechEnabled: state.isSpeechEnabled,
         toggleSpeech: state.toggleSpeech,
+        // FIX: Destructure handleNewGame from the store to centralize the logic.
+        handleNewGame: state.handleNewGame,
     }));
 
     useEffect(() => {
@@ -71,13 +74,6 @@ const SettingsPanel = () => {
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
-
-    const handleNewGame = () => {
-        if (window.confirm('Are you sure you want to start a new game? Your current progress will be lost.')) {
-            useGameStore.persist.clearStorage();
-            window.location.reload();
-        }
-    };
 
     return (
         <div className="fixed top-4 right-4 z-50">

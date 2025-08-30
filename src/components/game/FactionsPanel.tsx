@@ -43,7 +43,7 @@ const FactionsPanel: React.FC<FactionsPanelProps> = ({ reputation }) => {
         const hasHistory = repData.history.length > 0;
         
         return (
-            <div key={factionName} className={`rounded-lg ring-1 p-3 transition-all ${tier.classes}`}>
+            <div key={factionName} className={`relative group rounded-lg ring-1 p-3 transition-all ${tier.classes}`}>
                 <div className="flex justify-between items-center">
                     <span className="font-heading text-accent-primary text-base">{factionName}</span>
                     <div className={`font-ui font-semibold text-sm flex items-center gap-1.5 ${tier.color}`}>
@@ -52,16 +52,16 @@ const FactionsPanel: React.FC<FactionsPanelProps> = ({ reputation }) => {
                     </div>
                 </div>
                  {hasHistory && (
-                    <details className="mt-2 text-sm">
-                        <summary className="cursor-pointer text-text-secondary hover:text-text-primary font-ui text-xs">Show Log</summary>
-                        <ul className="list-disc list-inside space-y-1 mt-2 pl-2">
-                        {repData.history.map((entry, i) => (
-                          <li key={i} className="text-text-secondary font-body italic">
-                            {entry}
-                          </li>
-                        ))}
+                    <div className="absolute bottom-full mb-2 right-0 w-max max-w-xs bg-surface text-text-primary text-xs rounded-md p-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none shadow-lg ring-1 ring-border z-10 text-left font-body">
+                        <p className="font-bold text-accent-secondary font-ui mb-1">Recent History:</p>
+                        <ul className="list-disc list-inside space-y-1">
+                          {repData.history.slice(-3).map((entry, i) => (
+                            <li key={i} className="text-text-secondary italic">
+                              {entry}
+                            </li>
+                          ))}
                         </ul>
-                    </details>
+                    </div>
                  )}
             </div>
         );

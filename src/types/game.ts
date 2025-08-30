@@ -1,4 +1,4 @@
-import type { PersonalityLean, Affinity } from './character';
+import type { PersonalityLean, Affinity, Weave } from './character';
 
 export interface GeminiCreationResponse {
   description: string;
@@ -28,6 +28,11 @@ export type World = Record<string, {
   x: number;
   y: number;
 }>;
+
+export interface WorldEvent {
+  summary: string;
+  act: number;
+}
 
 export interface Choice {
   text: string;
@@ -78,6 +83,32 @@ export interface CharacterStatsUpdate {
   reason: string;
 }
 
+export interface AethericState {
+  condition: string;
+  description: string;
+}
+
+export interface Feat {
+  name: string;
+  description: string;
+  timestamp: number;
+}
+export interface FeatUnlock {
+    name: string;
+    description: string;
+}
+export interface Sanctum {
+    name: string;
+    level: number;
+    description: string;
+    upgrades: string[];
+}
+export interface SanctumUpdate {
+    name?: string;
+    levelChange?: number;
+    description?: string;
+    newUpgrade?: string;
+}
 
 export interface GeminiSceneResponse {
   description: string;
@@ -89,6 +120,7 @@ export interface GeminiSceneResponse {
   allowCustomAction?: boolean;
   allowExamineAction?: boolean;
   locationUpdate?: LocationUpdate;
+  worldEvent?: WorldEvent;
   actTransition?: {
     newAct: number;
     reason: string;
@@ -101,17 +133,28 @@ export interface GeminiSceneResponse {
   magicEffect?: { intensity: 'subtle' | 'powerful' };
   characterStatsUpdate?: CharacterStatsUpdate;
   loreUnlock?: { type: 'faction' | 'nation' | 'affinity', key: string };
+  aethericStateUpdate?: AethericState;
+  weaveLearn?: Weave;
+  featUnlock?: FeatUnlock;
+  sanctumUpdate?: SanctumUpdate;
 }
 
-export interface GameState extends Omit<GeminiSceneResponse, 'choices'> {
+export interface GameState extends Omit<GeminiSceneResponse, 'choices' | 'featUnlock' | 'sanctumUpdate'> {
   choices: (string | Choice)[]; // Allow string for character creation
   imageUrl: string | null;
   act: number;
+  aethericState: AethericState | null;
+}
+
+export interface GameUpdateEvent {
+  type: 'reputation' | 'journal' | 'item' | 'lore' | 'stats' | 'world' | 'people' | 'act' | 'aether' | 'feat' | 'sanctum';
+  message: string;
 }
 
 export interface StoryTurn {
     action: string;
     description:string;
+    events?: GameUpdateEvent[];
 }
 
 export type CreationStep = 'GENDER' | 'BACKGROUND' | 'NAME' | 'AFFINITY' | 'PERSONALITY' | 'MARK';
