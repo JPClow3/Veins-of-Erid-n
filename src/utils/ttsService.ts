@@ -64,30 +64,31 @@ class UnifiedTTSService implements TTSService {
           return await generateGeminiSpeech(text);
 
         case 'none':
-        default:
-          throw new Error('No TTS provider available');
-      }
-    } catch (error) {
-      logger.error('TTS generation failed', { 
-        provider: this.currentProvider, 
-        error,
-        text: text.substring(0, 100)
-      });
-
-      // If Speechify fails and fallback is enabled, try Gemini
-      if (this.currentProvider === 'speechify' && getTTSConfig().fallbackToGemini) {
-        logger.info('Falling back to Gemini TTS');
         try {
-          return await generateGeminiSpeech(text);
-        } catch (fallbackError) {
-          logger.error('Gemini fallback also failed', { error: fallbackError });
-          throw new Error(`TTS failed with both providers: ${error}`);
-        }
-      }
+          switch (this.currentProvider) {
+            case 'speechify':
+              if (!this.speechifyProvider) {
+                logger.error('Speechify provider not initialized');
+                throw new Error('Speechify provider not initialized');
+              }
+              return await this.speechifyProvider.generateSpeechAudio(text);
 
-      throw error;
-    }
-  }
+            case 'gemini':
+              return await generateGeminiSpeech(text);
+
+            case 'none':
+            default:
+              throw new Error('No TTS provider available');
+          }
+        } catch (error) {
+          logger.error('TTS generation failed', {
+            provider: this.currentProvider,
+            error,
+            text: text.substring(0, 100)
+          });
+
+          // If Speechify fails and fallback is enabled, try Gemini
+          /*...*/
 
   isAvailable(): boolean {
     return this.initialized && this.currentProvider !== 'none';
