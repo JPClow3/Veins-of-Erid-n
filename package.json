@@ -9,14 +9,16 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "react": "^19.1.1",
     "@google/genai": "^1.15.0",
-    "zustand": "^5.0.8",
-    "react-dom": "^19.1.1"
+    "@speechify/api": "^1.0.0",
+    "dotenv": "^17.2.1",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "zustand": "^5.0.8"
   },
   "devDependencies": {
     "@types/node": "^24.3.0",
-    "typescript": "~5.8.2",
-    "vite": "^6.2.0"
+    "typescript": "~5.9.2",
+    "vite": "^7.1.4"
   }
 }

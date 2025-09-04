@@ -1,6 +1,6 @@
-// A centralized utility for handling Gemini-powered Text-to-Speech.
+// A centralized utility for handling Text-to-Speech with support for multiple providers.
 
-import { generateSpeechAudio } from '../features/game/gameService';
+import { generateSpeechAudio } from './ttsService';
 import { base64ToBlobUrl } from './imageUtils';
 import { blobManager } from './blobManager';
 import logger from './logger';
