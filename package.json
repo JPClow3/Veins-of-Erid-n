@@ -9,7 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@google/genai": "^1.15.0",
+    "@google/genai": "^1.19.0",
     "@speechify/api": "^1.0.0",
     "dotenv": "^17.2.1",
     "react": "^19.1.1",
