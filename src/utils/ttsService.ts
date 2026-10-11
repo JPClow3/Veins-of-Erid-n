@@ -1,5 +1,5 @@
 import { generateSpeechAudio as generateGeminiSpeech } from '../features/game/gameService';
-import { initializeSpeechifyTTS, getSpeechifyTTS, SpeechifyTTSProvider } from './speechifyClient';
+import { initializeSpeechifyTTS, SpeechifyTTSProvider } from './speechifyClient';
 import { getTTSConfig, getTTSProviderType } from './config';
 import logger from './logger';
 
@@ -55,40 +55,21 @@ class UnifiedTTSService implements TTSService {
     try {
       switch (this.currentProvider) {
         case 'speechify':
-          if (!this.speechifyProvider) {
-            throw new Error('Speechify provider not initialized');
-          }
+          if (!this.speechifyProvider) throw new Error('Speechify provider not initialized');
           return await this.speechifyProvider.generateSpeechAudio(text);
-
         case 'gemini':
           return await generateGeminiSpeech(text);
-
-        case 'none':
-        try {
-          switch (this.currentProvider) {
-            case 'speechify':
-              if (!this.speechifyProvider) {
-                logger.error('Speechify provider not initialized');
-                throw new Error('Speechify provider not initialized');
-              }
-              return await this.speechifyProvider.generateSpeechAudio(text);
-
-            case 'gemini':
-              return await generateGeminiSpeech(text);
-
-            case 'none':
-            default:
-              throw new Error('No TTS provider available');
-          }
-        } catch (error) {
-          logger.error('TTS generation failed', {
-            provider: this.currentProvider,
-            error,
-            text: text.substring(0, 100)
-          });
-
-          // If Speechify fails and fallback is enabled, try Gemini
-          /*...*/
+        default:
+          throw new Error('No TTS provider available');
+      }
+    } catch (error) {
+      logger.error('TTS generation failed', { provider: this.currentProvider, error, textLength: text.length });
+      if (this.currentProvider === 'speechify' && getTTSConfig().fallbackToGemini) {
+        return await generateGeminiSpeech(text);
+      }
+      throw error;
+    }
+  }
 
   isAvailable(): boolean {
     return this.initialized && this.currentProvider !== 'none';
