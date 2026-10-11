@@ -11,7 +11,7 @@
   "dependencies": {
     "@google/genai": "^1.15.0",
     "@speechify/api": "^1.0.0",
-    "dotenv": "^17.2.1",
+    "dotenv": "^18.0.6",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "zustand": "^5.0.8"
